@@ -1,2 +1,5 @@
 *.mp4
+Client_image_cache/
+Server_image_cache/
+__pycache__/
 .idea/*

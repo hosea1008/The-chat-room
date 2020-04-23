@@ -79,7 +79,8 @@ class Video_Client(threading.Thread):
             self.sock = socket(AF_INET, SOCK_STREAM)
         else:
             self.sock = socket(AF_INET6, SOCK_STREAM)
-        self.cap = cv2.VideoCapture(0)
+        # self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture("fake_camera.mp4")
         print("VEDIO client starts...")
 
     def __del__(self) :

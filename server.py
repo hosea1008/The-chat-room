@@ -185,7 +185,8 @@ class FileServer(threading.Thread):
         self.ADDR = ('', port)
         # self.PORT = port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.first = r'.\resources'
+        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.first = r'./resources'
         os.chdir(self.first)                                     # 把first设为当前工作路径
         # self.conn = None
 

@@ -96,82 +96,6 @@ listbox.tag_config('green', foreground='green')
 listbox.tag_config('pink', foreground='pink')
 listbox.insert(tkinter.END, 'Welcome to the chat room!', 'blue')
 
-# # 表情功能代码部分
-# # 四个按钮, 使用全局变量, 方便创建和销毁
-# b1 = ''
-# b2 = ''
-# b3 = ''
-# b4 = ''
-# # 将图片打开存入变量中
-# p1 = tkinter.PhotoImage(file='./emoji/facepalm.png')
-# p2 = tkinter.PhotoImage(file='./emoji/smirk.png')
-# p3 = tkinter.PhotoImage(file='./emoji/concerned.png')
-# p4 = tkinter.PhotoImage(file='./emoji/smart.png')
-# # 用字典将标记与表情图片一一对应, 用于后面接收标记判断表情贴图
-# dic = {'aa**': p1, 'bb**': p2, 'cc**': p3, 'dd**': p4}
-# ee = 0  # 判断表情面板开关的标志
-
-
-# 发送表情图标记的函数, 在按钮点击事件中调用
-
-
-# def mark(exp):  # 参数是发的表情图标记, 发送后将按钮销毁
-#     global ee
-#     mes = exp + ':;' + user + ':;' + chat
-#     s.send(mes.encode())
-#     b1.destroy()
-#     b2.destroy()
-#     b3.destroy()
-#     b4.destroy()
-#     ee = 0
-#
-#
-# # 四个对应的函数
-# def bb1():
-#     mark('aa**')
-#
-#
-# def bb2():
-#     mark('bb**')
-#
-#
-# def bb3():
-#     mark('cc**')
-#
-#
-# def bb4():
-#     mark('dd**')
-#
-#
-# def express():
-#     global b1, b2, b3, b4, ee
-#     if ee == 0:
-#         ee = 1
-#         b1 = tkinter.Button(root, command=bb1, image=p1,
-#                             relief=tkinter.FLAT, bd=0)
-#         b2 = tkinter.Button(root, command=bb2, image=p2,
-#                             relief=tkinter.FLAT, bd=0)
-#         b3 = tkinter.Button(root, command=bb3, image=p3,
-#                             relief=tkinter.FLAT, bd=0)
-#         b4 = tkinter.Button(root, command=bb4, image=p4,
-#                             relief=tkinter.FLAT, bd=0)
-#
-#         b1.place(x=5, y=248)
-#         b2.place(x=75, y=248)
-#         b3.place(x=145, y=248)
-#         b4.place(x=215, y=248)
-#     else:
-#         ee = 0
-#         b1.destroy()
-#         b2.destroy()
-#         b3.destroy()
-#         b4.destroy()
-#
-#
-# # 创建表情按钮
-# eBut = tkinter.Button(root, text='emoji', command=express)
-# eBut.place(x=5, y=320, width=60, height=30)
-
 
 # 图片功能代码部分
 # 从图片服务端的缓存文件夹中下载图片到客户端缓存文件夹中
@@ -181,7 +105,7 @@ def fileGet(name):
     ss2.connect((IP, PORT3))
     message = 'get ' + name
     ss2.send(message.encode())
-    fileName = '.\\Client_image_cache\\' + name
+    fileName = './Client_image_cache/' + name
     print('Start downloading image!')
     print('Waiting.......')
     with open(fileName, 'wb') as f:
@@ -238,96 +162,6 @@ def picture():
 pBut = tkinter.Button(root, text='Image', command=picture)
 pBut.place(x=65, y=320, width=60, height=30)
 
-
-# 截屏函数如下所示
-class MyCapture:
-    def __init__(self, png):
-        # 变量X和Y用来记录鼠标左键按下的位置
-        self.X = tkinter.IntVar(value=0)
-        self.Y = tkinter.IntVar(value=0)
-        # 屏幕尺寸
-        screenWidth = root.winfo_screenwidth()
-        screenHeight = root.winfo_screenheight()
-        # 创建顶级组件容器
-        self.top = tkinter.Toplevel(root, width=screenWidth, height=screenHeight)
-        # 不显示最大化、最小化按钮
-        self.top.overrideredirect(True)
-        self.canvas = tkinter.Canvas(self.top, bg='white', width=screenWidth, height=screenHeight)
-        # 显示全屏截图，在全屏截图上进行区域截图
-        self.image = tkinter.PhotoImage(file=png)
-        self.canvas.create_image(screenWidth / 2, screenHeight / 2, image=self.image)
-        self.sel = None
-
-        # 鼠标左键按下的位置
-
-        def onLeftButtonDown(event):
-            self.X.set(event.x)
-            self.Y.set(event.y)
-            # 开始截图
-            self.sel = True
-
-        self.canvas.bind('<Button-1>', onLeftButtonDown)
-
-        # 鼠标左键移动，显示选取的区域
-        def onLeftButtonMove(event):
-            if not self.sel:
-                return
-            global lastDraw
-            try:
-                # 删除刚画完的图形，要不然鼠标移动的时候是黑乎乎的一片矩形
-                self.canvas.delete(lastDraw)
-            except Exception as e:
-                print(e)
-            lastDraw = self.canvas.create_rectangle(self.X.get(), self.Y.get(), event.x, event.y, outline='black')
-
-        self.canvas.bind('<B1-Motion>', onLeftButtonMove)
-
-        # 获取鼠标左键抬起的位置，保存区域截图
-        def onLeftButtonUp(event):
-            self.sel = False
-            try:
-                self.canvas.delete(lastDraw)
-            except Exception as e:
-                print(e)
-            sleep(0.1)
-            # 考虑鼠标左键从右下方按下而从左上方抬起的截图
-            left, right = sorted([self.X.get(), event.x])
-            top, bottom = sorted([self.Y.get(), event.y])
-            pic = ImageGrab.grab((left + 1, top + 1, right, bottom))
-            # 弹出保存截图对话框
-            fileName = tkinter.filedialog.asksaveasfilename(title='Save screenshot',
-                                                            filetypes=[('image', '*.jpg *.png')])
-            if fileName:
-                pic.save(fileName)
-            # 关闭当前窗口
-            self.top.destroy()
-
-        self.canvas.bind('<ButtonRelease-1>', onLeftButtonUp)
-        # 让canvas充满窗口，并随窗口自动适应大小
-        self.canvas.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-
-
-# 开始截图
-# def buttonCaptureClick():
-#     # 最小化主窗口
-#     root.state('icon')
-#     sleep(0.2)
-#     filename = 'temp.png'
-#     # grab()方法默认对全屏幕进行截图
-#     im = ImageGrab.grab()
-#     im.save(filename)
-#     im.close()
-#     # 显示全屏幕截图
-#     w = MyCapture(filename)
-#     sBut.wait_window(w.top)
-#     # 截图结束，恢复主窗口，并删除临时的全屏幕截图文件
-#     root.state('normal')
-#     os.remove(filename)
-#
-#
-# # 创建截屏按钮
-# sBut = tkinter.Button(root, text='Capture', command=buttonCaptureClick)
-# sBut.place(x=125, y=320, width=60, height=30)
 
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新

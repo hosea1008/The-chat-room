@@ -7,6 +7,7 @@ from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的�
 import time
 import requests
 from tkinter import filedialog
+import tkinter.font as tkFont
 import vachat
 import os
 from time import sleep
@@ -22,6 +23,7 @@ users = []  # 在线用户列表
 chat = '------Group chat-------'  # 聊天对象, 默认为群聊
 # 登陆窗口
 root1 = tkinter.Tk()
+root1.tk.call('tk', 'scaling', 6.0)
 root1.title('Log in')
 root1['height'] = 110
 root1['width'] = 270
@@ -32,15 +34,17 @@ IP1.set('127.0.0.1:50007')  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 
+fontStyle = tkFont.Font(family="Lucida Grande", size=30)
+
 # 服务器标签
-labelIP = tkinter.Label(root1, text='Server address')
+labelIP = tkinter.Label(root1, text='Server address', font=fontStyle)
 labelIP.place(x=20, y=10, width=100, height=20)
 
-entryIP = tkinter.Entry(root1, width=80, textvariable=IP1)
+entryIP = tkinter.Entry(root1, width=80, textvariable=IP1, font=fontStyle)
 entryIP.place(x=120, y=10, width=130, height=20)
 
 # 用户名标签
-labelUser = tkinter.Label(root1, text='Username')
+labelUser = tkinter.Label(root1, text='Username', font=fontStyle)
 labelUser.place(x=30, y=40, width=80, height=20)
 
 entryUser = tkinter.Entry(root1, width=80, textvariable=User)
@@ -60,7 +64,7 @@ def login(*args):
 
 
 root1.bind('<Return>', login)            # 回车绑定登录功能
-but = tkinter.Button(root1, text='Log in', command=login)
+but = tkinter.Button(root1, text='Log in', command=login, font=fontStyle)
 but.place(x=100, y=70, width=70, height=30)
 
 root1.mainloop()
@@ -81,6 +85,7 @@ if user == '':
 # 聊天窗口
 # 创建图形界面
 root = tkinter.Tk()
+root.tk.call('tk', 'scaling', 6.0)
 root.title(user)  # 窗口命名为用户名
 root['height'] = 400
 root['width'] = 580
@@ -94,7 +99,9 @@ listbox.tag_config('red', foreground='red')
 listbox.tag_config('blue', foreground='blue')
 listbox.tag_config('green', foreground='green')
 listbox.tag_config('pink', foreground='pink')
-listbox.insert(tkinter.END, 'Welcome to the chat room!', 'blue')
+listbox.tag_config('yellow', foreground='yellow')
+listbox.tag_config('cyan', foreground='cyan')
+listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
 
 
 # 图片功能代码部分
@@ -333,51 +340,51 @@ entry = tkinter.Entry(root, width=120, textvariable=a)
 entry.place(x=5, y=350, width=570, height=40)
 
 
-def call_robot(url, apikey, msg):
-    data = {
-        "reqType": 0,
-        "perception": {
-            # 用户输入文文信息
-            "inputText": {  # inputText文本信息
-                "text": msg
-            },
-            # 用户输入图片url
-            "inputImage": {  # 图片信息，后跟参数信息为url地址，string类型
-                "url": "https://cn.bing.com/images/"
-            },
-            # 用户输入音频地址信息
-            "inputMedia": {  # 音频信息，后跟参数信息为url地址，string类型
-                "url": "https://www.1ting.com/"
-            },
-            # 客户端属性信息
-            "selfInfo": {  # location 为selfInfo的参数信息，
-                "location": {  # 地理位置信息
-                    "city": "杭州",  # 所在城市，不允许为空
-                    "province": "浙江省",  # 所在省份，允许为空
-                    "street": "灵隐街道"  # 所在街道，允许为空
-                }
-            },
-        },
-        "userInfo": {
-            "apiKey": "ee19328107fa41e987a42a064a68d0da",  # 你注册的apikey,机器人标识,32位
-            "userId": "Brandon"  # 随便填，用户的唯一标识，长度小于等于32位
-        }
-    }
-    headers = {'content-type': 'application/json'}  # 必须是json
-    r = requests.post(url, headers=headers, data=json.dumps(data))
-    return r.json()
+# def call_robot(url, apikey, msg):
+#     data = {
+#         "reqType": 0,
+#         "perception": {
+#             # 用户输入文文信息
+#             "inputText": {  # inputText文本信息
+#                 "text": msg
+#             },
+#             # 用户输入图片url
+#             "inputImage": {  # 图片信息，后跟参数信息为url地址，string类型
+#                 "url": "https://cn.bing.com/images/"
+#             },
+#             # 用户输入音频地址信息
+#             "inputMedia": {  # 音频信息，后跟参数信息为url地址，string类型
+#                 "url": "https://www.1ting.com/"
+#             },
+#             # 客户端属性信息
+#             "selfInfo": {  # location 为selfInfo的参数信息，
+#                 "location": {  # 地理位置信息
+#                     "city": "杭州",  # 所在城市，不允许为空
+#                     "province": "浙江省",  # 所在省份，允许为空
+#                     "street": "灵隐街道"  # 所在街道，允许为空
+#                 }
+#             },
+#         },
+#         "userInfo": {
+#             "apiKey": "ee19328107fa41e987a42a064a68d0da",  # 你注册的apikey,机器人标识,32位
+#             "userId": "Brandon"  # 随便填，用户的唯一标识，长度小于等于32位
+#         }
+#     }
+#     headers = {'content-type': 'application/json'}  # 必须是json
+#     r = requests.post(url, headers=headers, data=json.dumps(data))
+#     return r.json()
 
 
 def send(*args):
     # 没有添加的话发送信息时会提示没有聊天对象
     users.append('------Group chat-------')
-    users.append('Robot')
+    # users.append('Robot')
     print(chat)
     if chat not in users:
         tkinter.messagebox.showerror('Send error', message='There is nobody to talk to!')
         return
-    if chat == 'Robot':
-        print('Robot')
+    # if chat == 'Robot':
+    #     print('Robot')
     if chat == user:
         tkinter.messagebox.showerror('Send error', message='Cannot talk with yourself in private!')
         return
@@ -578,7 +585,7 @@ def recv():
             listbox1.insert(tkinter.END, number)
             listbox1.itemconfig(tkinter.END, fg='green', bg="#f0f0ff")
             listbox1.insert(tkinter.END, '------Group chat-------')
-            listbox1.insert(tkinter.END, 'Robot')
+            # listbox1.insert(tkinter.END, 'Robot')
             listbox1.itemconfig(tkinter.END, fg='green')
             for i in range(len(data)):
                 listbox1.insert(tkinter.END, (data[i]))
@@ -589,9 +596,9 @@ def recv():
             data2 = data[1]  # 发送信息的用户名
             data3 = data[2]  # 聊天对象
             if 'INVITE' in data1:
-                if data3 == 'Robot':
-                    tkinter.messagebox.showerror('Connect error', message='Unable to make video chat with robot!')
-                elif data3 == '------Group chat-------':
+                # if data3 == 'Robot':
+                #     tkinter.messagebox.showerror('Connect error', message='Unable to make video chat with robot!')
+                if data3 == '------Group chat-------':
                     tkinter.messagebox.showerror('Connect error', message='Group video chat is not supported!')
                 elif (data2 == user and data3 == user) or (data2 != user):
                     video_invite_window(data1, data2)
@@ -622,20 +629,20 @@ def recv():
                 data1 = '\n' + data1
                 if data3 == '------Group chat-------':
                     if data2 == user:  # 如果是自己则将则字体变为蓝色
-                        listbox.insert(tkinter.END, data1, 'blue')
+                        listbox.insert(tkinter.END, data1, 'green')
                     else:
-                        listbox.insert(tkinter.END, data1, 'green')  # END将信息加在最后一行
+                        listbox.insert(tkinter.END, data1, 'yellow')  # END将信息加在最后一行
                     if len(data) == 4:
                         listbox.insert(tkinter.END, '\n' + data[3], 'pink')
-                elif data3 == 'Robot' and data2 == user:
-                    print('Here:Robot')
-                    apikey = 'ee19328107fa41e987a42a064a68d0da'
-                    url = 'http://openapi.tuling123.com/openapi/api/v2'
-                    print('msg = ', data1)
-                    listbox.insert(tkinter.END, data1, 'blue')
-                    reply = call_robot(url, apikey, data1.split('：')[1])
-                    reply_txt = '\nRobot:' + reply['results'][0]['values']['text']
-                    listbox.insert(tkinter.END, reply_txt, 'pink')
+                # elif data3 == 'Robot' and data2 == user:
+                #     print('Here:Robot')
+                #     apikey = 'ee19328107fa41e987a42a064a68d0da'
+                #     url = 'http://openapi.tuling123.com/openapi/api/v2'
+                #     print('msg = ', data1)
+                #     listbox.insert(tkinter.END, data1, 'green')
+                #     reply = call_robot(url, apikey, data1.split('：')[1])
+                #     reply_txt = '\nRobot:' + reply['results'][0]['values']['text']
+                #     listbox.insert(tkinter.END, reply_txt, 'pink')
                 elif data2 == user or data3 == user:  # 显示私聊
                     listbox.insert(tkinter.END, data1, 'red')  # END将信息加在最后一行
             listbox.see(tkinter.END)  # 显示在最后

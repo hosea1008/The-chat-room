@@ -1,5 +1,6 @@
 import socket
 import logging
+import struct
 import sys
 import threading
 import json  # json.dumps(some)打包   json.loads(some)解包
@@ -115,26 +116,26 @@ root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # 图片功能代码部分
 # 从图片服务端的缓存文件夹中下载图片到客户端缓存文件夹中
-def fileGet(name):
-    PORT3 = 50009
-    ss2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ss2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    ss2.connect((IP, PORT3))
-    message = 'get ' + name
-    ss2.send(message.encode())
-    fileName = '.%sClient_image_cache%s' % (os.path.sep, os.path.sep) + name
-    print('Start downloading image!')
-    print('Waiting.......')
-    with open(fileName, 'wb') as f:
-        while True:
-            data = ss2.recv(1024)
-            if data == 'EOF'.encode():
-                print('Download completed!')
-                break
-            f.write(data)
-    time.sleep(0.1)
-    ss2.send('quit'.encode())
-    ss2.close()
+# def fileGet(name):
+#     PORT3 = 50009
+#     ss2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     ss2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#     ss2.connect((IP, PORT3))
+#     message = 'get ' + name
+#     ss2.send(message.encode())
+#     fileName = '.%sClient_image_cache%s' % (os.path.sep, os.path.sep) + name
+#     print('Start downloading image!')
+#     print('Waiting.......')
+#     with open(fileName, 'wb') as f:
+#         while True:
+#             data = ss2.recv(1024)
+#             if data == 'EOF'.encode():
+#                 print('Download completed!')
+#                 break
+#             f.write(data)
+#     time.sleep(0.1)
+#     ss2.send(struct.pack('3si', 'qui', 0))
+#     ss2.close()
 
 
 # 文件功能代码部分
@@ -160,12 +161,13 @@ def fileClient():
     list2.place(x=580, y=25, width=175, height=325)
 
     # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
-    def recvList(enter, lu):
-        s.send(enter.encode())
+    def recvList(lu):
+        s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
+        s.send(lu.encode())
         data = s.recv(4096)
         data = json.loads(data.decode())
         list2.delete(0, tkinter.END)  # 清空列表框
-        lu = lu.split('\\')
+        lu = lu.split(os.path.sep)
         if len(lu) != 1:
             list2.insert(tkinter.END, 'Return to the previous dir')
             list2.itemconfig(0, fg='green')
@@ -188,27 +190,26 @@ def fileClient():
         except:
             label = tkinter.Label(root, text=lu)
             label.place(x=580, y=0, )
-        recvList('dir', lu)
+        recvList(lu)
 
     # 进入指定目录(cd)
-    def cd(message):
-        s.send(message.encode())
+    def cd(dir):
+        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
+        s.send(dir.encode())
 
     # 刚连接上服务端时进行一次面板刷新
-    cd('cd same')
+    cd('same')
     lab()
 
     # 接收下载文件(get)
-    def get(message):
+    def get(name):
         # print(message)
-        name = message.split(' ')
-        # print(name)
-        name = name[1]  # 获取命令的第二个参数(文件名)
         # 选择对话框, 选择文件的保存路径
         fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
         # 如果文件名非空才进行下载
         if fileName:
-            s.send(message.encode())
+            s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
+            s.send(name.encode())
             with open(fileName, 'wb') as f:
                 while True:
                     data = s.recv(1024)
@@ -225,12 +226,10 @@ def fileClient():
         content = list2.get(index)
         # 如果有一个 . 则为文件
         if '.' in content:
-            content = 'get ' + content
             get(content)
-            cd('cd same')
+            cd('same')
         elif content == 'Return to the previous dir':
-            content = 'cd ..'
-            cd(content)
+            cd('..')
         else:
             content = 'cd ' + content
             cd(content)
@@ -247,7 +246,10 @@ def fileClient():
         if fileName:
             name = fileName.split(os.path.sep)[-1]
             # TODO introduce struct.pack to send command and data
-            message = 'put ' + name
+            command = 'put'
+            message = name
+            header = struct.pack('3si', bytes(command, encoding='utf8'), len(message))
+            s.send(header)
             s.send(message.encode())
             logging.warning("message %s sent to server" % message)
             with open(fileName, 'rb') as f:
@@ -263,7 +265,7 @@ def fileClient():
                 logging.warning("EOF sent")
             tkinter.messagebox.showinfo(title='Message',
                                         message='Upload completed!')
-        cd('cd same')
+        cd('same')
         lab()  # 上传成功后刷新显示页面
 
     # 创建上传按钮, 并绑定上传文件功能
@@ -275,7 +277,8 @@ def fileClient():
         root['height'] = 390
         root['width'] = 580
         # 关闭连接
-        s.send('quit'.encode())
+        header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
+        s.send(header)
         s.close()
 
     # 创建关闭按钮

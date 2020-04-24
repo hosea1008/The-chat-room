@@ -1,5 +1,6 @@
 import logging
 import socket
+import struct
 import threading
 import queue
 import json  # json.dumps(some)打包   json.loads(some)解包
@@ -145,14 +146,15 @@ class FileServer(threading.Thread):
         print(' Connected by: ', addr)
         
         while True:
-            data = conn.recv(1024)
+            header = conn.recv(struct.calcsize('3si'))
+            command, message_length = struct.unpack('3si', header)
+            message = conn.recv(message_length).decode()
+            command = command.decode()
             # TODO introduce struct.pack to handle data and command
-            data = data.decode()
-            if data == 'quit':
+            if command == 'qui':
                 print('Disconnected from {0}'.format(addr))
                 break
-            order = data.split(' ')[0]                             # 获取动作
-            self.recv_func(order, data, conn)
+            self.recv_func(command, message, conn)
                 
         conn.close()
 
@@ -164,7 +166,7 @@ class FileServer(threading.Thread):
 
     # 发送文件函数
     def sendFile(self, message, conn):
-        name = message.split()[1]                               # 获取第二个参数(文件名)
+        name = message.strip()                               # 获取第二个参数(文件名)
         fileName = r'.%s' % os.path.sep + name
         with open(fileName, 'rb') as f:    
             while True:
@@ -177,7 +179,7 @@ class FileServer(threading.Thread):
 
     # 保存上传的文件到当前工作目录
     def recvFile(self, message, conn):
-        name = message.split()[1]                              # 获取文件名
+        name = message.strip()
         fileName = r'.%s' % os.path.sep + name
         with open(fileName, 'wb') as f:
             while True:
@@ -185,13 +187,14 @@ class FileServer(threading.Thread):
                 if data == 'EOF'.encode():
                     break
                 f.write(data)
+        logging.warning('file wrote to %s' % fileName)
 
     # 切换工作目录
     def cd(self, message, conn):
-        message = message.split()[1]                          # 截取目录名
+        dir = message.strip()                          # 截取目录名
         # 如果是新连接或者下载上传文件后的发送则 不切换 只将当前工作目录发送过去
-        if message != 'same':
-            f = os.path.sep + message
+        if dir != 'same':
+            f = os.path.sep + dir
             os.chdir(f)
         # path = ''
         path = os.getcwd().split(os.path.sep)                        # 当前工作目录
@@ -210,15 +213,15 @@ class FileServer(threading.Thread):
         conn.send(pat.encode())
 
     # 判断输入的命令并执行对应的函数
-    def recv_func(self, order, message, conn):
-        logging.warning("receive message %s" % message)
-        if order == 'get':
+    def recv_func(self, command, message, conn):
+        logging.warning("receive command %s message %s" % (command, message))
+        if command == 'get':
             return self.sendFile(message, conn)
-        elif order == 'put':
+        elif command == 'put':
             return self.recvFile(message, conn)
-        elif order == 'dir':
+        elif command == 'ls ':
             return self.sendList(conn)
-        elif order == 'cd':
+        elif command == 'cd ':
             return self.cd(message, conn)
 
     def run(self):

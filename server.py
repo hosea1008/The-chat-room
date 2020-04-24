@@ -1,3 +1,4 @@
+import logging
 import socket
 import threading
 import queue
@@ -139,13 +140,13 @@ class FileServer(threading.Thread):
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.first = r'.%sresources' % os.path.sep
         os.chdir(self.first)                                     # 把first设为当前工作路径
-        # self.conn = None
 
     def tcp_connect(self, conn, addr):
         print(' Connected by: ', addr)
         
         while True:
             data = conn.recv(1024)
+            # TODO introduce struct.pack to handle data and command
             data = data.decode()
             if data == 'quit':
                 print('Disconnected from {0}'.format(addr))
@@ -210,6 +211,7 @@ class FileServer(threading.Thread):
 
     # 判断输入的命令并执行对应的函数
     def recv_func(self, order, message, conn):
+        logging.warning("receive message %s" % message)
         if order == 'get':
             return self.sendFile(message, conn)
         elif order == 'put':

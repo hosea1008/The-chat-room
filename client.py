@@ -1,4 +1,5 @@
 import socket
+import logging
 import sys
 import threading
 import json  # json.dumps(some)打包   json.loads(some)解包
@@ -245,18 +246,23 @@ def fileClient():
         # 如果有选择文件才继续执行
         if fileName:
             name = fileName.split(os.path.sep)[-1]
+            # TODO introduce struct.pack to send command and data
             message = 'put ' + name
             s.send(message.encode())
+            logging.warning("message %s sent to server" % message)
             with open(fileName, 'rb') as f:
+                logging.warning("file %s opened" % fileName)
                 while True:
                     a = f.read(1024)
                     if not a:
                         break
                     s.send(a)
+                logging.warning("file sent")
                 time.sleep(0.1)  # 延时确保文件发送完整
                 s.send('EOF'.encode())
-                tkinter.messagebox.showinfo(title='Message',
-                                            message='Upload completed!')
+                logging.warning("EOF sent")
+            tkinter.messagebox.showinfo(title='Message',
+                                        message='Upload completed!')
         cd('cd same')
         lab()  # 上传成功后刷新显示页面
 

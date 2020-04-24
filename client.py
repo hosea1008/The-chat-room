@@ -1,4 +1,5 @@
 import socket
+import sys
 import threading
 import json  # json.dumps(some)打包   json.loads(some)解包
 import tkinter
@@ -7,7 +8,6 @@ from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的�
 import time
 import requests
 from tkinter import filedialog
-import tkinter.font as tkFont
 import vachat
 import os
 from time import sleep
@@ -34,17 +34,15 @@ IP1.set('127.0.0.1:50007')  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 
-fontStyle = tkFont.Font(family="Lucida Grande", size=30)
-
 # 服务器标签
-labelIP = tkinter.Label(root1, text='Server address', font=fontStyle)
+labelIP = tkinter.Label(root1, text='Server address')
 labelIP.place(x=20, y=10, width=100, height=20)
 
-entryIP = tkinter.Entry(root1, width=80, textvariable=IP1, font=fontStyle)
+entryIP = tkinter.Entry(root1, width=80, textvariable=IP1)
 entryIP.place(x=120, y=10, width=130, height=20)
 
 # 用户名标签
-labelUser = tkinter.Label(root1, text='Username', font=fontStyle)
+labelUser = tkinter.Label(root1, text='Username')
 labelUser.place(x=30, y=40, width=80, height=20)
 
 entryUser = tkinter.Entry(root1, width=80, textvariable=User)
@@ -55,21 +53,22 @@ entryUser.place(x=120, y=40, width=130, height=20)
 def login(*args):
     global IP, PORT, user
     IP, PORT = entryIP.get().split(':')  # 获取IP和端口号
-    PORT = int(PORT)                     # 端口号需要为int类型
+    PORT = int(PORT)  # 端口号需要为int类型
     user = entryUser.get()
     if not user:
         tkinter.messagebox.showerror('Name type error', message='Username Empty!')
     else:
-        root1.destroy()                  # 关闭窗口
+        root1.destroy()  # 关闭窗口
 
 
-root1.bind('<Return>', login)            # 回车绑定登录功能
-but = tkinter.Button(root1, text='Log in', command=login, font=fontStyle)
+root1.bind('<Return>', login)  # 回车绑定登录功能
+but = tkinter.Button(root1, text='Log in', command=login)
 but.place(x=100, y=70, width=70, height=30)
 
 root1.mainloop()
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 s.connect((IP, PORT))
 if user:
     s.send(user.encode())  # 发送用户名
@@ -104,15 +103,25 @@ listbox.tag_config('cyan', foreground='cyan')
 listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
 
 
+def on_closing():
+    if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
+        root.destroy()
+        sys.exit()
+
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
+
+
 # 图片功能代码部分
 # 从图片服务端的缓存文件夹中下载图片到客户端缓存文件夹中
 def fileGet(name):
     PORT3 = 50009
     ss2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ss2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     ss2.connect((IP, PORT3))
     message = 'get ' + name
     ss2.send(message.encode())
-    fileName = './Client_image_cache/' + name
+    fileName = '.%sClient_image_cache%s' % (os.path.sep, os.path.sep) + name
     print('Start downloading image!')
     print('Waiting.......')
     with open(fileName, 'wb') as f:
@@ -124,51 +133,53 @@ def fileGet(name):
             f.write(data)
     time.sleep(0.1)
     ss2.send('quit'.encode())
+    ss2.close()
 
 
 # 将图片上传到图片服务端的缓存文件夹中
-def filePut(fileName):
-    PORT3 = 50009
-    ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ss.connect((IP, PORT3))
-    # 截取文件名
-    print(fileName)
-    name = fileName.split('/')[-1]
-    print(name)
-    message = 'put ' + name
-    ss.send(message.encode())
-    time.sleep(0.1)
-    print('Start uploading image!')
-    print('Waiting.......')
-    with open(fileName, 'rb') as f:
-        while True:
-            a = f.read(1024)
-            if not a:
-                break
-            ss.send(a)
-        time.sleep(0.1)  # 延时确保文件发送完整
-        ss.send('EOF'.encode())
-        print('Upload completed')
-    ss.send('quit'.encode())
-    time.sleep(0.1)
-    # 上传成功后发一个信息给所有客户端
-    mes = '``#' + name + ':;' + user + ':;' + chat
-    s.send(mes.encode())
+# def filePut(fileName):
+#     PORT3 = 50009
+#     ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#     ss.connect((IP, PORT3))
+#     # 截取文件名
+#     print(fileName)
+#     name = fileName.split(os.path.sep)[-1]
+#     print(name)
+#     message = 'put ' + name
+#     ss.send(message.encode())
+#     time.sleep(0.1)
+#     print('Start uploading image!')
+#     print('Waiting.......')
+#     with open(fileName, 'rb') as f:
+#         while True:
+#             a = f.read(1024)
+#             if not a:
+#                 break
+#             ss.send(a)
+#         time.sleep(0.1)  # 延时确保文件发送完整
+#         ss.send('EOF'.encode())
+#         print('Upload completed')
+#     ss.send('quit'.encode())
+#     time.sleep(0.1)
+#     # 上传成功后发一个信息给所有客户端
+#     mes = '``#' + name + ':;' + user + ':;' + chat
+#     s.send(mes.encode())
+#     ss.close()
 
 
-def picture():
-    # 选择对话框
-    fileName = tkinter.filedialog.askopenfilename(title='Select upload image')
-    # 如果有选择文件才继续执行
-    if fileName:
-        # 调用发送图片函数
-        filePut(fileName)
+# def picture():
+#     # 选择对话框
+#     fileName = tkinter.filedialog.askopenfilename(title='Select upload image')
+#     # 如果有选择文件才继续执行
+#     if fileName:
+#         # 调用发送图片函数
+#         filePut(fileName)
 
 
 # 创建发送图片按钮
-pBut = tkinter.Button(root, text='Image', command=picture)
-pBut.place(x=65, y=320, width=60, height=30)
-
+# pBut = tkinter.Button(root, text='Image', command=picture)
+# pBut.place(x=65, y=320, width=60, height=30)
 
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
@@ -181,6 +192,7 @@ close = ''  # 关闭按钮
 def fileClient():
     PORT2 = 50008  # 聊天室的端口为50007
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.connect((IP, PORT2))
 
     # 修改root窗口大小显示文件管理的组件
@@ -277,7 +289,7 @@ def fileClient():
         fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
         # 如果有选择文件才继续执行
         if fileName:
-            name = fileName.split('/')[-1]
+            name = fileName.split(os.path.sep)[-1]
             message = 'put ' + name
             s.send(message.encode())
             with open(fileName, 'rb') as f:
@@ -340,41 +352,6 @@ entry = tkinter.Entry(root, width=120, textvariable=a)
 entry.place(x=5, y=350, width=570, height=40)
 
 
-# def call_robot(url, apikey, msg):
-#     data = {
-#         "reqType": 0,
-#         "perception": {
-#             # 用户输入文文信息
-#             "inputText": {  # inputText文本信息
-#                 "text": msg
-#             },
-#             # 用户输入图片url
-#             "inputImage": {  # 图片信息，后跟参数信息为url地址，string类型
-#                 "url": "https://cn.bing.com/images/"
-#             },
-#             # 用户输入音频地址信息
-#             "inputMedia": {  # 音频信息，后跟参数信息为url地址，string类型
-#                 "url": "https://www.1ting.com/"
-#             },
-#             # 客户端属性信息
-#             "selfInfo": {  # location 为selfInfo的参数信息，
-#                 "location": {  # 地理位置信息
-#                     "city": "杭州",  # 所在城市，不允许为空
-#                     "province": "浙江省",  # 所在省份，允许为空
-#                     "street": "灵隐街道"  # 所在街道，允许为空
-#                 }
-#             },
-#         },
-#         "userInfo": {
-#             "apiKey": "ee19328107fa41e987a42a064a68d0da",  # 你注册的apikey,机器人标识,32位
-#             "userId": "Brandon"  # 随便填，用户的唯一标识，长度小于等于32位
-#         }
-#     }
-#     headers = {'content-type': 'application/json'}  # 必须是json
-#     r = requests.post(url, headers=headers, data=json.dumps(data))
-#     return r.json()
-
-
 def send(*args):
     # 没有添加的话发送信息时会提示没有聊天对象
     users.append('------Group chat-------')
@@ -383,11 +360,10 @@ def send(*args):
     if chat not in users:
         tkinter.messagebox.showerror('Send error', message='There is nobody to talk to!')
         return
-    # if chat == 'Robot':
-    #     print('Robot')
     if chat == user:
         tkinter.messagebox.showerror('Send error', message='Cannot talk with yourself in private!')
         return
+    # TODO Add Chinese support
     mes = entry.get() + ':;' + user + ':;' + chat  # 添加聊天对象标记
     s.send(mes.encode())
     a.set('')  # 发送后清空文本框
@@ -399,10 +375,10 @@ button.place(x=515, y=353, width=60, height=30)
 root.bind('<Return>', send)  # 绑定回车发送信息
 
 # 视频聊天部分
-IsOpen = False    # 判断视频/音频的服务器是否已打开
-Resolution = 0    # 图像传输的分辨率 0-4依次递减
-Version = 4       # 传输协议版本 IPv4/IPv6
-ShowMe = True     # 视频聊天时是否打开本地摄像头
+IsOpen = False  # 判断视频/音频的服务器是否已打开
+Resolution = 0  # 图像传输的分辨率 0-4依次递减
+Version = 4  # 传输协议版本 IPv4/IPv6
+ShowMe = True  # 视频聊天时是否打开本地摄像头
 AudioOpen = True  # 是否打开音频聊天
 
 
@@ -585,7 +561,6 @@ def recv():
             listbox1.insert(tkinter.END, number)
             listbox1.itemconfig(tkinter.END, fg='green', bg="#f0f0ff")
             listbox1.insert(tkinter.END, '------Group chat-------')
-            # listbox1.insert(tkinter.END, 'Robot')
             listbox1.itemconfig(tkinter.END, fg='green')
             for i in range(len(data)):
                 listbox1.insert(tkinter.END, (data[i]))
@@ -596,21 +571,16 @@ def recv():
             data2 = data[1]  # 发送信息的用户名
             data3 = data[2]  # 聊天对象
             if 'INVITE' in data1:
-                # if data3 == 'Robot':
-                #     tkinter.messagebox.showerror('Connect error', message='Unable to make video chat with robot!')
                 if data3 == '------Group chat-------':
                     tkinter.messagebox.showerror('Connect error', message='Group video chat is not supported!')
                 elif (data2 == user and data3 == user) or (data2 != user):
                     video_invite_window(data1, data2)
                 continue
-            markk = data1.split('：')[1]
+            markk = data1.split(': ')[1]
             # 判断是不是图片
             pic = markk.split('#')
-            # 判断是不是表情
-            # 如果字典里有则贴图
-            # if (markk in dic) or pic[0] == '``':
             if pic[0] == '``':
-                data4 = '\n' + data2 + '：'  # 例:名字-> \n名字：
+                data4 = '\n' + data2 + ': '  # 例:名字-> \n名字：
                 if data3 == '------Group chat-------':
                     if data2 == user:  # 如果是自己则将则字体变为蓝色
                         listbox.insert(tkinter.END, data4, 'blue')
@@ -623,7 +593,6 @@ def recv():
                     fileGet(pic[1])
                 else:
                     # 将表情图贴到聊天框
-                    # listbox.image_create(tkinter.END, image=dic[markk])
                     pass
             else:
                 data1 = '\n' + data1
@@ -634,15 +603,6 @@ def recv():
                         listbox.insert(tkinter.END, data1, 'yellow')  # END将信息加在最后一行
                     if len(data) == 4:
                         listbox.insert(tkinter.END, '\n' + data[3], 'pink')
-                # elif data3 == 'Robot' and data2 == user:
-                #     print('Here:Robot')
-                #     apikey = 'ee19328107fa41e987a42a064a68d0da'
-                #     url = 'http://openapi.tuling123.com/openapi/api/v2'
-                #     print('msg = ', data1)
-                #     listbox.insert(tkinter.END, data1, 'green')
-                #     reply = call_robot(url, apikey, data1.split('：')[1])
-                #     reply_txt = '\nRobot:' + reply['results'][0]['values']['text']
-                #     listbox.insert(tkinter.END, reply_txt, 'pink')
                 elif data2 == user or data3 == user:  # 显示私聊
                     listbox.insert(tkinter.END, data1, 'red')  # END将信息加在最后一行
             listbox.see(tkinter.END)  # 显示在最后
@@ -652,4 +612,5 @@ r = threading.Thread(target=recv)
 r.start()  # 开始线程接收信息
 
 root.mainloop()
+r.join()
 s.close()  # 关闭图形界面后关闭TCP连接

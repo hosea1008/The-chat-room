@@ -232,88 +232,11 @@ class FileServer(threading.Thread):
 #############################################################################
 
 
-# class PictureServer(threading.Thread):
-#
-#     def __init__(self, port):
-#         threading.Thread.__init__(self)
-#         # self.setDaemon(True)
-#         self.ADDR = ('', port)
-#         # self.PORT = port
-#         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#         # self.conn = None
-#         os.chdir(sys.path[0])
-#         self.folder = '.%sServer_image_cache%s' % (os.path.sep, os.path.sep)  # 图片的保存文件夹
-#
-#     def tcp_connect(self, conn, addr):
-#         while True:
-#             data = conn.recv(1024)
-#             data = data.decode()
-#             print('Received message from {0}: {1}'.format(addr, data))
-#             if data == 'quit':
-#                 break
-#             order = data.split()[0]  # 获取动作
-#             self.recv_func(order, data, conn)
-#         conn.close()
-#         print('---')
-#
-#     # 发送文件函数
-#     def sendFile(self, message, conn):
-#         print(message)
-#         name = message.split()[1]                   # 获取第二个参数(文件名)
-#         fileName = self.folder + name               # 将文件夹和图片名连接起来
-#         f = open(fileName, 'rb')
-#         while True:
-#             a = f.read(1024)
-#             if not a:
-#                 break
-#             conn.send(a)
-#         time.sleep(0.1)                             # 延时确保文件发送完整
-#         conn.send('EOF'.encode())
-#         print('Image sent!')
-#
-#     # 保存上传的文件到当前工作目录
-#     def recvFile(self, message, conn):
-#         print(message)
-#         name = message.split(' ')[1]                   # 获取文件名
-#         fileName = self.folder + name                  # 将文件夹和图片名连接起来
-#         print(fileName)
-#         print('Start saving!')
-#         f = open(fileName, 'wb+')
-#         while True:
-#             data = conn.recv(1024)
-#             if data == 'EOF'.encode():
-#                 print('Saving completed!')
-#                 break
-#             f.write(data)
-#
-#     # 判断输入的命令并执行对应的函数
-#     def recv_func(self, order, message, conn):
-#         if order == 'get':
-#             return self.sendFile(message, conn)
-#         elif order == 'put':
-#             return self.recvFile(message, conn)
-#
-#     def run(self):
-#         self.s.bind(self.ADDR)
-#         self.s.listen(5)
-#         print('Picture server starts running...')
-#         while True:
-#             conn, addr = self.s.accept()
-#             t = threading.Thread(target=self.tcp_connect, args=(conn, addr))
-#             t.start()
-#         self.s.close()
-
-####################################################################################
-
-
 if __name__ == '__main__':
     cserver = ChatServer(PORT)
     fserver = FileServer(PORT + 1)
-    # pserver = PictureServer(PORT + 2)
     cserver.start()
     fserver.start()
-    # pserver.start()
     while True:
         time.sleep(1)
         if not cserver.isAlive():
@@ -322,6 +245,3 @@ if __name__ == '__main__':
         if not fserver.isAlive():
             print("File connection lost...")
             sys.exit(0)
-        # if not pserver.isAlive():
-        #     print("Picture connection lost...")
-        #     sys.exit(0)

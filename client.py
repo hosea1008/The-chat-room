@@ -136,51 +136,6 @@ def fileGet(name):
     ss2.close()
 
 
-# 将图片上传到图片服务端的缓存文件夹中
-# def filePut(fileName):
-#     PORT3 = 50009
-#     ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#     ss.connect((IP, PORT3))
-#     # 截取文件名
-#     print(fileName)
-#     name = fileName.split(os.path.sep)[-1]
-#     print(name)
-#     message = 'put ' + name
-#     ss.send(message.encode())
-#     time.sleep(0.1)
-#     print('Start uploading image!')
-#     print('Waiting.......')
-#     with open(fileName, 'rb') as f:
-#         while True:
-#             a = f.read(1024)
-#             if not a:
-#                 break
-#             ss.send(a)
-#         time.sleep(0.1)  # 延时确保文件发送完整
-#         ss.send('EOF'.encode())
-#         print('Upload completed')
-#     ss.send('quit'.encode())
-#     time.sleep(0.1)
-#     # 上传成功后发一个信息给所有客户端
-#     mes = '``#' + name + ':;' + user + ':;' + chat
-#     s.send(mes.encode())
-#     ss.close()
-
-
-# def picture():
-#     # 选择对话框
-#     fileName = tkinter.filedialog.askopenfilename(title='Select upload image')
-#     # 如果有选择文件才继续执行
-#     if fileName:
-#         # 调用发送图片函数
-#         filePut(fileName)
-
-
-# 创建发送图片按钮
-# pBut = tkinter.Button(root, text='Image', command=picture)
-# pBut.place(x=65, y=320, width=60, height=30)
-
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
 list2 = ''  # 列表框

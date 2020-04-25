@@ -247,22 +247,26 @@ def fileClient():
             name = fileName.split(os.path.sep)[-1]
             # TODO introduce struct.pack to send command and data
             command = 'put'
-            message = name
-            header = struct.pack('3si', bytes(command, encoding='utf8'), len(message))
+            file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
+            header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
             s.send(header)
-            s.send(message.encode())
-            logging.warning("message %s sent to server" % message)
-            with open(fileName, 'rb') as f:
-                logging.warning("file %s opened" % fileName)
-                while True:
-                    a = f.read(1024)
-                    if not a:
-                        break
-                    s.send(a)
-                logging.warning("file sent")
-                time.sleep(0.1)  # 延时确保文件发送完整
-                s.send('EOF'.encode())
-                logging.warning("EOF sent")
+            s.send(file_header)
+            logging.warning("message %s sent to server" % file_header)
+            fo = open(fileName, 'rb')
+            while True:
+                filedata = fo.read(1024)
+                if not filedata:
+                    break
+                s.send(filedata)
+            fo.close()
+            # with open(fileName, 'rb') as f:
+            #     logging.warning("file %s opened" % fileName)
+            #     while True:
+            #         a = f.read(1024)
+            #         if not a:
+            #             break
+            #         s.send(a)
+            logging.warning("file sent")
             tkinter.messagebox.showinfo(title='Message',
                                         message='Upload completed!')
         cd('same')

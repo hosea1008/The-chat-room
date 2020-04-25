@@ -148,7 +148,7 @@ class FileServer(threading.Thread):
         while True:
             header = conn.recv(struct.calcsize('3si'))
             command, message_length = struct.unpack('3si', header)
-            message = conn.recv(message_length).decode()
+            message = conn.recv(message_length)
             command = command.decode()
             # TODO introduce struct.pack to handle data and command
             if command == 'qui':
@@ -179,15 +179,30 @@ class FileServer(threading.Thread):
 
     # 保存上传的文件到当前工作目录
     def recvFile(self, message, conn):
-        name = message.strip()
-        fileName = r'.%s' % os.path.sep + name
-        with open(fileName, 'wb') as f:
-            while True:
-                data = conn.recv(1024)
-                if data == 'EOF'.encode():
-                    break
-                f.write(data)
-        logging.warning('file wrote to %s' % fileName)
+        name, file_length = struct.unpack('128sl', message)
+        name = name.strip(b'\00').decode()
+        file_name = r'.%s' % os.path.sep + name.strip()
+
+        logging.warning('filesize is: %s\t\tfilename is: %s' % (file_length, file_name))
+        recvd_size = 0  # 定义接收了的文件大小
+        file = open(file_name, 'wb')
+        logging.warning('stat receiving...')
+        while not recvd_size == file_length:
+            if file_length - recvd_size > 1024:
+                rdata = conn.recv(1024)
+                recvd_size += len(rdata)
+            else:
+                rdata = conn.recv(file_length - recvd_size)
+                recvd_size = file_length
+            file.write(rdata)
+        file.close()
+        # with open(fileName, 'wb') as f:
+        #     while True:
+        #         data = conn.recv(1024)
+        #         if data == 'EOF'.encode():
+        #             break
+        #         f.write(data)
+        logging.warning('file wrote to %s' % file_name)
 
     # 切换工作目录
     def cd(self, message, conn):
@@ -216,13 +231,13 @@ class FileServer(threading.Thread):
     def recv_func(self, command, message, conn):
         logging.warning("receive command %s message %s" % (command, message))
         if command == 'get':
-            return self.sendFile(message, conn)
+            return self.sendFile(message.decode(), conn)
         elif command == 'put':
             return self.recvFile(message, conn)
         elif command == 'ls ':
             return self.sendList(conn)
         elif command == 'cd ':
-            return self.cd(message, conn)
+            return self.cd(message.decode(), conn)
 
     def run(self):
         print('File server starts running...')

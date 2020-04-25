@@ -117,7 +117,6 @@ def on_closing():
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
 
-
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
 list2 = ''  # 列表框
@@ -273,7 +272,6 @@ def fileClient():
 def UDTfileClient():
     PORT2 = 50008  # 聊天室的端口为50007
     s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-    # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.connect((IP, PORT2))
 
     # 修改root窗口大小显示文件管理的组件
@@ -410,6 +408,7 @@ def UDTfileClient():
     # 创建关闭按钮
     close = tkinter.Button(root, text='Close', command=closeFile)
     close.place(x=685, y=353, height=30, width=70)
+
 
 # 创建文件按钮
 fBut = tkinter.Button(root, text='File', command=UDTfileClient)

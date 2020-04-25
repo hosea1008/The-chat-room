@@ -556,12 +556,6 @@ def recv():
                         listbox.insert(tkinter.END, data4, 'green')  # END将信息加在最后一行
                 elif data2 == user or data3 == user:  # 显示私聊
                     listbox.insert(tkinter.END, data4, 'red')  # END将信息加在最后一行
-                if pic[0] == '``':
-                    # 从服务端下载发送的图片
-                    fileGet(pic[1])
-                else:
-                    # 将表情图贴到聊天框
-                    pass
             else:
                 data1 = '\n' + data1
                 if data3 == '------Group chat-------':

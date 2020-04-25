@@ -1,5 +1,6 @@
 import logging
 import socket
+import udt
 import struct
 import threading
 import queue
@@ -129,8 +130,6 @@ class ChatServer(threading.Thread):
         self.s.close()
 
 ################################################################
-
-
 class FileServer(threading.Thread):
     def __init__(self, port):
         threading.Thread.__init__(self)
@@ -140,11 +139,11 @@ class FileServer(threading.Thread):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.first = r'.%sresources' % os.path.sep
-        os.chdir(self.first)                                     # 把first设为当前工作路径
+        os.chdir(self.first)  # 把first设为当前工作路径
 
     def tcp_connect(self, conn, addr):
         print(' Connected by: ', addr)
-        
+
         while True:
             header = conn.recv(struct.calcsize('3si'))
             command, message_length = struct.unpack('3si', header)
@@ -155,7 +154,7 @@ class FileServer(threading.Thread):
                 print('Disconnected from {0}'.format(addr))
                 break
             self.recv_func(command, message, conn)
-                
+
         conn.close()
 
     # 传输当前目录列表
@@ -166,15 +165,15 @@ class FileServer(threading.Thread):
 
     # 发送文件函数
     def sendFile(self, message, conn):
-        name = message.strip()                               # 获取第二个参数(文件名)
+        name = message.strip()  # 获取第二个参数(文件名)
         fileName = r'.%s' % os.path.sep + name
-        with open(fileName, 'rb') as f:    
+        with open(fileName, 'rb') as f:
             while True:
                 a = f.read(1024)
                 if not a:
                     break
                 conn.send(a)
-        time.sleep(0.1)                                          # 延时确保文件发送完整
+        time.sleep(0.1)  # 延时确保文件发送完整
         conn.send('EOF'.encode())
 
     # 保存上传的文件到当前工作目录
@@ -206,13 +205,13 @@ class FileServer(threading.Thread):
 
     # 切换工作目录
     def cd(self, message, conn):
-        dir = message.strip()                          # 截取目录名
+        dir = message.strip()  # 截取目录名
         # 如果是新连接或者下载上传文件后的发送则 不切换 只将当前工作目录发送过去
         if dir != 'same':
             f = os.path.sep + dir
             os.chdir(f)
         # path = ''
-        path = os.getcwd().split(os.path.sep)                        # 当前工作目录
+        path = os.getcwd().split(os.path.sep)  # 当前工作目录
         for i in range(len(path)):
             if path[i] == 'resources':
                 break
@@ -249,12 +248,127 @@ class FileServer(threading.Thread):
             t.start()
         self.s.close()
 
+
+class UDTFileServer(threading.Thread):
+    def __init__(self, port):
+        threading.Thread.__init__(self)
+        # self.setDaemon(True)
+        self.ADDR = ('0.0.0.0', port)
+        # self.PORT = port
+        self.s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+        # self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.first = r'.%sresources' % os.path.sep
+        os.chdir(self.first)                                     # 把first设为当前工作路径
+
+    def tcp_connect(self, conn, addr):
+        print(' Connected by: ', addr)
+        
+        while True:
+            header = conn.recv(struct.calcsize('3si'), 0)
+            command, message_length = struct.unpack('3si', header)
+            message = conn.recv(message_length, 0)
+            command = command.decode()
+            # TODO introduce struct.pack to handle data and command
+            if command == 'qui':
+                print('Disconnected from {0}'.format(addr))
+                break
+            self.recv_func(command, message, conn)
+                
+        conn.close()
+
+    # 传输当前目录列表
+    def sendList(self, conn):
+        listdir = os.listdir(os.getcwd())
+        listdir = json.dumps(listdir)
+        conn.send(listdir.encode(), 0)
+
+    # 发送文件函数
+    def sendFile(self, message, conn):
+        name = message.strip()                               # 获取第二个参数(文件名)
+        fileName = r'.%s' % os.path.sep + name
+        file_length = os.stat(fileName).st_size
+        conn.send(struct.pack('l', file_length), 0)
+        fo = open(fileName, 'rb')
+        while True:
+            filedata = fo.read(1024)
+            if not filedata:
+                break
+            conn.send(filedata, 0)
+        fo.close()
+        logging.warning("file sent")
+
+    # 保存上传的文件到当前工作目录
+    def recvFile(self, message, conn):
+        name, file_length = struct.unpack('128sl', message)
+        name = name.strip(b'\00').decode()
+        file_name = r'.%s' % os.path.sep + name.strip()
+
+        logging.warning('filesize is: %s\t\tfilename is: %s' % (file_length, file_name))
+        recvd_size = 0  # 定义接收了的文件大小
+        file = open(file_name, 'wb')
+        logging.warning('stat receiving...')
+        while not recvd_size == file_length:
+            if file_length - recvd_size > 1024:
+                rdata = conn.recv(1024, 0)
+                recvd_size += len(rdata)
+            else:
+                rdata = conn.recv(file_length - recvd_size, 0)
+                recvd_size = file_length
+            file.write(rdata)
+        file.close()
+        logging.warning('file wrote to %s' % file_name)
+
+    # 切换工作目录
+    def cd(self, message, conn):
+        dir = message.strip()                          # 截取目录名
+        # 如果是新连接或者下载上传文件后的发送则 不切换 只将当前工作目录发送过去
+        if dir != 'same':
+            f = os.path.sep + dir
+            os.chdir(f)
+        # path = ''
+        path = os.getcwd().split(os.path.sep)                        # 当前工作目录
+        for i in range(len(path)):
+            if path[i] == 'resources':
+                break
+        pat = ''
+        for j in range(i, len(path)):
+            pat = pat + path[j] + ' '
+        pat = os.path.sep.join(pat.split())
+        # 如果切换目录超出范围则退回切换前目录
+        if 'resources' not in path:
+            f = r'.%sresources' % os.path.sep
+            os.chdir(f)
+            pat = 'resources'
+        conn.send(pat.encode(), 0)
+
+    # 判断输入的命令并执行对应的函数
+    def recv_func(self, command, message, conn):
+        logging.warning("receive command %s message %s" % (command, message))
+        if command == 'get':
+            return self.sendFile(message.decode(), conn)
+        elif command == 'put':
+            return self.recvFile(message, conn)
+        elif command == 'ls ':
+            return self.sendList(conn)
+        elif command == 'cd ':
+            return self.cd(message.decode(), conn)
+
+    def run(self):
+        print('File server starts running...')
+        self.s.bind(self.ADDR)
+        self.s.listen(3)
+        while True:
+            conn, addr = self.s.accept()
+            t = threading.Thread(target=self.tcp_connect, args=(conn, addr))
+            t.start()
+        self.s.close()
+
 #############################################################################
 
 
 if __name__ == '__main__':
     cserver = ChatServer(PORT)
-    fserver = FileServer(PORT + 1)
+    fserver = UDTFileServer(PORT + 1)
     cserver.start()
     fserver.start()
     while True:

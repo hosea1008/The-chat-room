@@ -138,7 +138,7 @@ class FileServer(threading.Thread):
         # self.PORT = port
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.first = r'.%sresources' % os.path.sep
+        self.first = r'.%stcp_resources' % os.path.sep
         os.chdir(self.first)  # 把first设为当前工作路径
 
     def tcp_connect(self, conn, addr):
@@ -213,17 +213,17 @@ class FileServer(threading.Thread):
         # path = ''
         path = os.getcwd().split(os.path.sep)  # 当前工作目录
         for i in range(len(path)):
-            if path[i] == 'resources':
+            if path[i] == 'tcp_resources':
                 break
         pat = ''
         for j in range(i, len(path)):
             pat = pat + path[j] + ' '
         pat = os.path.sep.join(pat.split())
         # 如果切换目录超出范围则退回切换前目录
-        if 'resources' not in path:
-            f = r'.%sresources' % os.path.sep
+        if 'tcp_resources' not in path:
+            f = r'.%stcp_resources' % os.path.sep
             os.chdir(f)
-            pat = 'resources'
+            pat = 'tcp_resources'
         conn.send(pat.encode())
 
     # 判断输入的命令并执行对应的函数
@@ -257,7 +257,7 @@ class UDTFileServer(threading.Thread):
         # self.PORT = port
         self.s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         # self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.first = r'.%sresources' % os.path.sep
+        self.first = r'.%sudt_resources' % os.path.sep
         os.chdir(self.first)                                     # 把first设为当前工作路径
 
     def tcp_connect(self, conn, addr):
@@ -327,17 +327,17 @@ class UDTFileServer(threading.Thread):
         # path = ''
         path = os.getcwd().split(os.path.sep)                        # 当前工作目录
         for i in range(len(path)):
-            if path[i] == 'resources':
+            if path[i] == 'udt_resources':
                 break
         pat = ''
         for j in range(i, len(path)):
             pat = pat + path[j] + ' '
         pat = os.path.sep.join(pat.split())
         # 如果切换目录超出范围则退回切换前目录
-        if 'resources' not in path:
-            f = r'.%sresources' % os.path.sep
+        if 'udt_resources' not in path:
+            f = r'.%sudt_resources' % os.path.sep
             os.chdir(f)
-            pat = 'resources'
+            pat = 'udt_resources'
         conn.send(pat.encode(), 0)
 
     # 判断输入的命令并执行对应的函数

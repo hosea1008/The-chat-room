@@ -137,7 +137,7 @@ def fileClient():
 
     # 创建列表框
     list2 = tkinter.Listbox(root)
-    list2.place(x=580, y=25, width=175, height=325)
+    list2.place(x=580, y=25, width=200, height=325)
 
     # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
     def recvList(lu):
@@ -275,12 +275,18 @@ def UDTfileClient():
     s.connect((IP, PORT2))
 
     # 修改root窗口大小显示文件管理的组件
-    root['height'] = 390
-    root['width'] = 760
+    # 创建UDT file pannel
+    udt_pannel = tkinter.Tk()
+    udt_pannel.tk.call('tk', 'scaling', 6.0)
+    udt_pannel.title("UDT File")
+    udt_pannel['height'] = 390
+    udt_pannel['width'] = 200
+    udt_pannel.resizable(0, 0)
+    udt_pannel.protocol("WM_DELETE_WINDOW", closeFile)
 
     # 创建列表框
-    list2 = tkinter.Listbox(root)
-    list2.place(x=580, y=25, width=175, height=325)
+    list2 = tkinter.Listbox(udt_pannel)
+    list2.place(x=0, y=25, width=200, height=325)
 
     # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
     def recvList(lu):
@@ -334,6 +340,7 @@ def UDTfileClient():
             file_length = struct.unpack('l', s.recv(struct.calcsize('l'), 0))[0]
             recvd_size = 0
             logging.warning("%s bytes to receive, start receiving..." % file_length)
+            start_time = time.time()
             file = open(fileName, 'wb')
             while not recvd_size == file_length:
                 if file_length - recvd_size > 1024:
@@ -344,6 +351,8 @@ def UDTfileClient():
                     recvd_size = file_length
                 file.write(rdata)
             file.close()
+            tkinter.messagebox.showinfo(title='Message',
+                                        message='UDT Download completed in %.2fms' % (time.time() - start_time))
             logging.warning('file wrote to %s' % fileName)
 
     # 创建用于绑定在列表框上的函数
@@ -380,6 +389,7 @@ def UDTfileClient():
             s.send(file_header, 0)
             logging.warning("message %s sent to server" % file_header)
             fo = open(fileName, 'rb')
+            start_time = time.time()
             while True:
                 filedata = fo.read(1024)
                 if not filedata:
@@ -388,31 +398,32 @@ def UDTfileClient():
             fo.close()
             logging.warning("file sent")
             tkinter.messagebox.showinfo(title='Message',
-                                        message='Upload completed!')
+                                        message='UDT Upload completed in %.2fms' % (time.time() - start_time))
         cd('same')
         lab()  # 上传成功后刷新显示页面
 
     # 创建上传按钮, 并绑定上传文件功能
-    upload = tkinter.Button(root, text='Upload file', command=put)
-    upload.place(x=600, y=353, height=30, width=80)
+    upload = tkinter.Button(udt_pannel, text='Upload file', command=put)
+    upload.place(x=20, y=353, height=30, width=80)
 
     # 关闭文件管理器, 待完善
     def closeFile():
-        root['height'] = 390
-        root['width'] = 580
+        # root['height'] = 390
+        # root['width'] = 580
+        udt_pannel.distroy()
         # 关闭连接
         header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
         s.send(header, 0)
         # s.close()
 
     # 创建关闭按钮
-    close = tkinter.Button(root, text='Close', command=closeFile)
-    close.place(x=685, y=353, height=30, width=70)
+    close = tkinter.Button(udt_pannel, text='Close', command=closeFile)
+    close.place(x=105, y=353, height=30, width=70)
 
 
 # 创建文件按钮
-fBut = tkinter.Button(root, text='File', command=UDTfileClient)
-fBut.place(x=185, y=320, width=60, height=30)
+udt_file_button = tkinter.Button(root, text='UDT File', command=UDTfileClient)
+udt_file_button.place(x=185, y=320, width=60, height=30)
 
 # 创建多行文本框, 显示在线用户
 listbox1 = tkinter.Listbox(root)

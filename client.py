@@ -405,7 +405,7 @@ def UDTfileClient():
         # 关闭连接
         header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
         s.send(header, 0)
-        s.close()
+        # s.close()
 
     # 创建关闭按钮
     close = tkinter.Button(root, text='Close', command=closeFile)

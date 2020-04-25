@@ -273,7 +273,6 @@ class UDTFileServer(threading.Thread):
                 print('Disconnected from {0}'.format(addr))
                 break
             self.recv_func(command, message, conn)
-                
         conn.close()
 
     # 传输当前目录列表

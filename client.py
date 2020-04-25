@@ -16,6 +16,7 @@ from time import sleep
 from PIL import ImageGrab
 from netifaces import interfaces, ifaddresses, AF_INET6
 
+EXIT = False
 IP = ''
 PORT = ''
 user = ''
@@ -106,36 +107,14 @@ listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
 
 
 def on_closing():
+    global EXIT
     if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
+        EXIT = True
         root.destroy()
         sys.exit()
 
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
-
-
-# 图片功能代码部分
-# 从图片服务端的缓存文件夹中下载图片到客户端缓存文件夹中
-# def fileGet(name):
-#     PORT3 = 50009
-#     ss2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     ss2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#     ss2.connect((IP, PORT3))
-#     message = 'get ' + name
-#     ss2.send(message.encode())
-#     fileName = '.%sClient_image_cache%s' % (os.path.sep, os.path.sep) + name
-#     print('Start downloading image!')
-#     print('Waiting.......')
-#     with open(fileName, 'wb') as f:
-#         while True:
-#             data = ss2.recv(1024)
-#             if data == 'EOF'.encode():
-#                 print('Download completed!')
-#                 break
-#             f.write(data)
-#     time.sleep(0.1)
-#     ss2.send(struct.pack('3si', 'qui', 0))
-#     ss2.close()
 
 
 # 文件功能代码部分
@@ -176,7 +155,7 @@ def fileClient():
             if '.' not in data[i]:
                 list2.itemconfig(tkinter.END, fg='orange')
             else:
-                list2.itemconfig(tkinter.END, fg='blue')
+                list2.itemconfig(tkinter.END, fg='white')
 
     # 创建标签显示服务端工作目录
     def lab():
@@ -516,8 +495,11 @@ listbox1.bind('<ButtonRelease-1>', private)
 
 # 用于时刻接收服务端发送的信息并打印
 def recv():
-    global users
+    global users, EXIT
     while True:
+        if EXIT:
+            s.close()
+            break
         data = s.recv(1024)
         data = data.decode()
         # 没有捕获到异常则表示接收到的是在线用户列表
@@ -574,5 +556,4 @@ r = threading.Thread(target=recv)
 r.start()  # 开始线程接收信息
 
 root.mainloop()
-r.join()
 s.close()  # 关闭图形界面后关闭TCP连接

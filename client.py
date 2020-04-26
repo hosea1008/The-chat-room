@@ -34,7 +34,7 @@ root1['width'] = 270
 root1.resizable(0, 0)  # 限制窗口大小
 
 IP1 = tkinter.StringVar()
-IP1.set('127.0.0.1:50007')  # 默认显示的ip和端口
+IP1.set('60.10.4.21:50007')  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 

@@ -358,6 +358,7 @@ class UDTFileServer(threading.Thread):
         self.s.listen(3)
         while True:
             conn, addr = self.s.accept()
+            logging.warning("connection accepted")
             t = threading.Thread(target=self.tcp_connect, args=(conn, addr))
             t.start()
         self.s.close()

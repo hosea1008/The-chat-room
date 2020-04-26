@@ -272,7 +272,9 @@ def fileClient():
 def UDTfileClient():
     PORT2 = 50008  # 聊天室的端口为50007
     s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    logging.warning("UDT socket created")
     s.connect((IP, PORT2))
+    logging.warning("UDT socket connected to %s:%s" % (IP, PORT2))
 
     # 创建UDT file pannel
     udt_pannel = tkinter.Tk()

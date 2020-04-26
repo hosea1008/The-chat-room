@@ -137,7 +137,7 @@ def fileClient():
 
     # 创建列表框
     list2 = tkinter.Listbox(root)
-    list2.place(x=580, y=25, width=200, height=325)
+    list2.place(x=580, y=25, width=300, height=325)
 
     # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
     def recvList(lu):
@@ -274,19 +274,37 @@ def UDTfileClient():
     s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     s.connect((IP, PORT2))
 
-    # 修改root窗口大小显示文件管理的组件
     # 创建UDT file pannel
     udt_pannel = tkinter.Tk()
     udt_pannel.tk.call('tk', 'scaling', 6.0)
-    udt_pannel.title("UDT File")
+    udt_pannel.title("UDT File (%s)" % user)
     udt_pannel['height'] = 390
-    udt_pannel['width'] = 200
+    udt_pannel['width'] = 300
     udt_pannel.resizable(0, 0)
+
+    # 关闭文件管理器, 待完善
+    def closeFile():
+        # root['height'] = 390
+        # root['width'] = 580
+        udt_pannel.destroy()
+        # 关闭连接
+        header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
+        s.send(header, 0)
+        # 创建关闭按钮
+
     udt_pannel.protocol("WM_DELETE_WINDOW", closeFile)
+
+    # 进入指定目录(cd)
+    def cd(dir='same'):
+        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)), 0)
+        s.send(dir.encode(), 0)
+
+    refresh = tkinter.Button(udt_pannel, text='Refresh', command=cd)
+    refresh.place(x=105, y=353, height=30, width=70)
 
     # 创建列表框
     list2 = tkinter.Listbox(udt_pannel)
-    list2.place(x=0, y=25, width=200, height=325)
+    list2.place(x=0, y=25, width=300, height=325)
 
     # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
     def recvList(lu):
@@ -319,11 +337,6 @@ def UDTfileClient():
             label = tkinter.Label(root, text=lu)
             label.place(x=580, y=0, )
         recvList(lu)
-
-    # 进入指定目录(cd)
-    def cd(dir):
-        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)), 0)
-        s.send(dir.encode(), 0)
 
     # 刚连接上服务端时进行一次面板刷新
     cd('same')
@@ -405,20 +418,7 @@ def UDTfileClient():
     # 创建上传按钮, 并绑定上传文件功能
     upload = tkinter.Button(udt_pannel, text='Upload file', command=put)
     upload.place(x=20, y=353, height=30, width=80)
-
-    # 关闭文件管理器, 待完善
-    def closeFile():
-        # root['height'] = 390
-        # root['width'] = 580
-        udt_pannel.distroy()
-        # 关闭连接
-        header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
-        s.send(header, 0)
-        # s.close()
-
-    # 创建关闭按钮
-    close = tkinter.Button(udt_pannel, text='Close', command=closeFile)
-    close.place(x=105, y=353, height=30, width=70)
+    udt_pannel.mainloop()
 
 
 # 创建文件按钮

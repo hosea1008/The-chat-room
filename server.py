@@ -279,6 +279,7 @@ class UDTFileServer(threading.Thread):
     def sendList(self, conn):
         listdir = os.listdir(os.getcwd())
         listdir = json.dumps(listdir)
+        conn.send(struct.pack('l', len(listdir.encode())), 0)
         conn.send(listdir.encode(), 0)
 
     # 发送文件函数
@@ -319,11 +320,6 @@ class UDTFileServer(threading.Thread):
 
     # 切换工作目录
     def cd(self, message, conn):
-        dir = message.strip()                          # 截取目录名
-        # 如果是新连接或者下载上传文件后的发送则 不切换 只将当前工作目录发送过去
-        # if dir != 'same':
-        #     f = os.path.sep + dir
-        #     os.chdir(f)
         path = os.getcwd().split(os.path.sep)                        # 当前工作目录
         for i in range(len(path)):
             if path[i] == 'udt_resources':
@@ -348,8 +344,8 @@ class UDTFileServer(threading.Thread):
             return self.recvFile(message, conn)
         elif command == 'ls ':
             return self.sendList(conn)
-        elif command == 'cd ':
-            return self.cd(message.decode(), conn)
+        # elif command == 'cd ':
+        #     return self.cd(message.decode(), conn)
 
     def run(self):
         print('File server starts running...')

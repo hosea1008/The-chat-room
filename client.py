@@ -287,8 +287,6 @@ def UDTfileClient():
 
     # 关闭文件管理器, 待完善
     def closeFile():
-        # root['height'] = 390
-        # root['width'] = 580
         udt_pannel.destroy()
         # 关闭连接
         header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
@@ -297,66 +295,25 @@ def UDTfileClient():
 
     udt_pannel.protocol("WM_DELETE_WINDOW", closeFile)
 
-    # 进入指定目录(cd)
-    def cd(dir='same'):
-        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)), 0)
-        s.send(dir.encode(), 0)
+    # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
+    def ls():
+        s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), 0), 0)
+        data_length = struct.unpack("l", s.recv(struct.calcsize('l'), 0))[0]
+        data = s.recv(data_length, 0)
+        data = json.loads(data.decode())
+        list2.delete(0, tkinter.END)  # 清空列表框
+        for i in range(len(data)):
+            list2.insert(tkinter.END, ('' + data[i]))
+            list2.itemconfig(tkinter.END, fg='white')
 
-    # class RefreshTimer:
-    #     def __init__(self):
-    #         self.t = Timer(1, self.func)
-    #         self.t.start()
-    #
-    #     def func(self):
-    #         cd()
-    #         self.t.cancel()
-    #         self.t = Timer(1, self.func())
-    #         self.t.start()
-    #
-    # timer = RefreshTimer()
-
-    refresh = tkinter.Button(udt_pannel, text='Refresh', command=cd)
+    refresh = tkinter.Button(udt_pannel, text='Refresh', command=ls)
     refresh.place(x=105, y=353, height=30, width=70)
 
     # 创建列表框
     list2 = tkinter.Listbox(udt_pannel)
     list2.place(x=0, y=25, width=300, height=325)
 
-    # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
-    def recvList(lu):
-        s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())), 0)
-        s.send(lu.encode(), 0)
-        data = s.recv(4096, 0)
-        data = json.loads(data.decode())
-        list2.delete(0, tkinter.END)  # 清空列表框
-        lu = lu.split(os.path.sep)
-        if len(lu) != 1:
-            list2.insert(tkinter.END, 'Return to the previous dir')
-            list2.itemconfig(0, fg='green')
-        for i in range(len(data)):
-            list2.insert(tkinter.END, ('' + data[i]))
-            if '.' not in data[i]:
-                list2.itemconfig(tkinter.END, fg='orange')
-            else:
-                list2.itemconfig(tkinter.END, fg='white')
-
-    # 创建标签显示服务端工作目录
-    def lab():
-        global label
-        data = s.recv(1024, 0)  # 接收目录
-        lu = data.decode()
-        try:
-            label.destroy()
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        except:
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        recvList(lu)
-
-    # 刚连接上服务端时进行一次面板刷新
-    cd('same')
-    lab()
+    ls()
 
     # 接收下载文件(get)
     def get(name):
@@ -389,16 +346,8 @@ def UDTfileClient():
         indexs = list2.curselection()
         index = indexs[0]
         content = list2.get(index)
-        # 如果有一个 . 则为文件
-        if '.' in content:
-            get(content)
-            cd('same')
-        elif content == 'Return to the previous dir':
-            cd('..')
-        else:
-            content = 'cd ' + content
-            cd(content)
-        lab()  # 刷新显示页面
+        get(content)
+        ls()
 
     # 在列表框上设置绑定事件
     list2.bind('<ButtonRelease-1>', run)
@@ -428,12 +377,16 @@ def UDTfileClient():
             logging.warning("file sent")
             tkinter.messagebox.showinfo(title='Message',
                                         message='UDT Upload completed in %.2fms' % (time.time() - start_time))
-        cd('same')
-        lab()  # 上传成功后刷新显示页面
+        ls()
+
+    def auto_refresh():
+        ls()
+        udt_pannel.after(500, func=auto_refresh)
 
     # 创建上传按钮, 并绑定上传文件功能
     upload = tkinter.Button(udt_pannel, text='Upload file', command=put)
     upload.place(x=20, y=353, height=30, width=80)
+    udt_pannel.after(500, func=auto_refresh)
     udt_pannel.mainloop()
 
 

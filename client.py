@@ -1,4 +1,5 @@
 import socket
+from threading import Timer
 import udt
 import logging
 import struct
@@ -34,7 +35,7 @@ root1['width'] = 270
 root1.resizable(0, 0)  # 限制窗口大小
 
 IP1 = tkinter.StringVar()
-IP1.set('60.10.4.21:50007')  # 默认显示的ip和端口
+IP1.set('127.0.0.1:50007')  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 
@@ -300,6 +301,19 @@ def UDTfileClient():
     def cd(dir='same'):
         s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)), 0)
         s.send(dir.encode(), 0)
+
+    # class RefreshTimer:
+    #     def __init__(self):
+    #         self.t = Timer(1, self.func)
+    #         self.t.start()
+    #
+    #     def func(self):
+    #         cd()
+    #         self.t.cancel()
+    #         self.t = Timer(1, self.func())
+    #         self.t.start()
+    #
+    # timer = RefreshTimer()
 
     refresh = tkinter.Button(udt_pannel, text='Refresh', command=cd)
     refresh.place(x=105, y=353, height=30, width=70)

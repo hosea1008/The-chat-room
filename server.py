@@ -321,10 +321,9 @@ class UDTFileServer(threading.Thread):
     def cd(self, message, conn):
         dir = message.strip()                          # 截取目录名
         # 如果是新连接或者下载上传文件后的发送则 不切换 只将当前工作目录发送过去
-        if dir != 'same':
-            f = os.path.sep + dir
-            os.chdir(f)
-        # path = ''
+        # if dir != 'same':
+        #     f = os.path.sep + dir
+        #     os.chdir(f)
         path = os.getcwd().split(os.path.sep)                        # 当前工作目录
         for i in range(len(path)):
             if path[i] == 'udt_resources':
@@ -355,13 +354,12 @@ class UDTFileServer(threading.Thread):
     def run(self):
         print('File server starts running...')
         self.s.bind(self.ADDR)
-        self.s.listen(3)
+        self.s.listen(10)
         while True:
             conn, addr = self.s.accept()
             logging.warning("connection accepted")
             t = threading.Thread(target=self.tcp_connect, args=(conn, addr))
             t.start()
-        self.s.close()
 
 #############################################################################
 

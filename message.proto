@@ -1,0 +1,7 @@
+syntax = "proto3";
+package message;
+
+message message {
+    double messageLength = 1;
+    string message = 2;
+}

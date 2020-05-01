@@ -18,106 +18,94 @@ from netifaces import interfaces, ifaddresses, AF_INET6
 
 import vachat
 
-EXIT = False
-IP = ''
-PORT = ''
-username = ''
-listbox1 = ''  # 用于显示在线用户的列表框
-ii = 0  # 用于判断是开还是关闭列表框
-users = []  # 在线用户列表
-chat = '------Group chat-------'  # 聊天对象, 默认为群聊
 
-# 登陆窗口
-root1 = tkinter.Tk()
-root1.tk.call('tk', 'scaling', 6.0)
-root1.title('Log in')
-root1['height'] = 110
-root1['width'] = 270
-root1.resizable(0, 0)  # 限制窗口大小
+class ChatClient():
+    def __init__(self):
+        self.server_ip = '127.0.0.1'
+        self.server_port = 50007
+        self.username = ''
+        self.listbox1 = ''  # 用于显示在线用户的列表框
+        self.ii = 0  # 用于判断是开还是关闭列表框
+        self.users = []  # 在线用户列表
+        self.chat = '------Group chat-------'  # 聊天对象, 默认为群聊
 
-IP1 = tkinter.StringVar()
-IP1.set('127.0.0.1:50007')  # 默认显示的ip和端口
-User = tkinter.StringVar()
-User.set('')
+    def login(self):
+        login_window = tkinter.Tk()
+        login_window.tk.call('tk', 'scaling', 6.0)
+        login_window.title('Log in')
+        login_window['height'] = 110
+        login_window['width'] = 270
+        login_window.resizable(0, 0)
+        default_ip = tkinter.StringVar()
+        default_ip.set("%s:%s" % (self.server_ip, self.server_port))
+        default_user = tkinter.StringVar()
+        default_user.set(self.username)
 
-# 服务器标签
-labelIP = tkinter.Label(root1, text='Server address')
-labelIP.place(x=20, y=10, width=100, height=20)
+        label_ip = tkinter.Label(login_window, text="Server address")
+        label_ip.place(x=20, y=10, width=100, height=20)
 
-entryIP = tkinter.Entry(root1, width=80, textvariable=IP1)
-entryIP.place(x=120, y=10, width=130, height=20)
+        entry_addr = tkinter.Entry(login_window, width=80, textvariable=default_ip)
+        entry_addr.place(x=120, y=10, width=130, height=20)
 
-# 用户名标签
-labelUser = tkinter.Label(root1, text='Username')
-labelUser.place(x=30, y=40, width=80, height=20)
+        label_user = tkinter.Label(login_window, text="Username")
+        label_user.place(x=30, y=40, width=80, height=20)
 
-entryUser = tkinter.Entry(root1, width=80, textvariable=User)
-entryUser.place(x=120, y=40, width=130, height=20)
+        entry_user = tkinter.Entry(login_window, width=80, textvariable=default_user)
+        entry_user.place(x=120, y=40, width=130, height=20)
 
+        def login_handler():
+            self.server_ip, self.server_port = entry_addr.get().split(":")
+            self.server_port = int(self.server_port)
+            self.username = entry_user.get()
+            if not self.username:
+                tkinter.messagebox.showerror("Name type error", message='Username Empty!')
+            else:
+                login_window.destroy()
 
-# 登录按钮
-def login(*args):
-    global IP, PORT, username
-    IP, PORT = entryIP.get().split(':')  # 获取IP和端口号
-    PORT = int(PORT)  # 端口号需要为int类型
-    username = entryUser.get()
-    if not username:
-        tkinter.messagebox.showerror('Name type error', message='Username Empty!')
-    else:
-        root1.destroy()  # 关闭窗口
+        login_window.bind('<Return>', login_handler)
+        but = tkinter.Button(login_window,
+                             text='Log in',
+                             command=login_handler)
+        but.place(x=100, y=70, width=70, height=30)
 
+        login_window.mainloop()
 
-root1.bind('<Return>', login)  # 回车绑定登录功能
-but = tkinter.Button(root1, text='Log in', command=login)
-but.place(x=100, y=70, width=70, height=30)
+    def connect(self):
+        self.chat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.chat_socket.connect((self.server_ip, self.server_port))
+        self.chat_socket.send(self.username.encode())  # 发送用户名
 
-root1.mainloop()
+    def chat(self):
+        # 聊天窗口
+        # 创建图形界面
+        root = tkinter.Tk()
+        root.tk.call('tk', 'scaling', 6.0)
+        root.title(self.username)  # 窗口命名为用户名
+        root['height'] = 400
+        root['width'] = 580
+        root.resizable(0, 0)  # 限制窗口大小
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.connect((IP, PORT))
-if username:
-    s.send(username.encode())  # 发送用户名
-else:
-    s.send('no'.encode())  # 没有输入用户名则标记no
+        # 创建多行文本框
+        listbox = ScrolledText(root)
+        listbox.place(x=5, y=0, width=570, height=320)
+        # 文本框使用的字体颜色
+        listbox.tag_config('red', foreground='red')
+        listbox.tag_config('blue', foreground='blue')
+        listbox.tag_config('green', foreground='green')
+        listbox.tag_config('pink', foreground='pink')
+        listbox.tag_config('yellow', foreground='yellow')
+        listbox.tag_config('cyan', foreground='cyan')
+        listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
 
-# 如果没有用户名则将ip和端口号设置为用户名
-addr = s.getsockname()  # 获取客户端ip和端口号
-addr = addr[0] + ':' + str(addr[1])
-if username == '':
-    username = addr
+        def on_closing():
+            if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
+                root.destroy()
+                sys.exit()
 
-# 聊天窗口
-# 创建图形界面
-root = tkinter.Tk()
-root.tk.call('tk', 'scaling', 6.0)
-root.title(username)  # 窗口命名为用户名
-root['height'] = 400
-root['width'] = 580
-root.resizable(0, 0)  # 限制窗口大小
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        root.mainloop()
 
-# 创建多行文本框
-listbox = ScrolledText(root)
-listbox.place(x=5, y=0, width=570, height=320)
-# 文本框使用的字体颜色
-listbox.tag_config('red', foreground='red')
-listbox.tag_config('blue', foreground='blue')
-listbox.tag_config('green', foreground='green')
-listbox.tag_config('pink', foreground='pink')
-listbox.tag_config('yellow', foreground='yellow')
-listbox.tag_config('cyan', foreground='cyan')
-listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
-
-
-def on_closing():
-    global EXIT
-    if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
-        EXIT = True
-        root.destroy()
-        sys.exit()
-
-
-root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
@@ -127,148 +115,148 @@ upload = ''  # 上传按钮
 close = ''  # 关闭按钮
 
 
-def fileClient():
-    PORT2 = 50008  # 聊天室的端口为50007
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.connect((IP, PORT2))
+        def fileClient():
+                             PORT2 = 50008  # 聊天室的端口为50007
+                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                             s.connect((IP, PORT2))
 
-    # 修改root窗口大小显示文件管理的组件
-    root['height'] = 390
-    root['width'] = 760
+                             # 修改root窗口大小显示文件管理的组件
+                             root['height'] = 390
+                             root['width'] = 760
 
-    # 创建列表框
-    list2 = tkinter.Listbox(root)
-    list2.place(x=580, y=25, width=300, height=325)
+                             # 创建列表框
+                             list2 = tkinter.Listbox(root)
+                             list2.place(x=580, y=25, width=300, height=325)
 
-    # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
-    def recvList(lu):
-        s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
-        s.send(lu.encode())
-        data = s.recv(4096)
-        data = json.loads(data.decode())
-        list2.delete(0, tkinter.END)  # 清空列表框
-        lu = lu.split(os.path.sep)
-        if len(lu) != 1:
-            list2.insert(tkinter.END, 'Return to the previous dir')
-            list2.itemconfig(0, fg='green')
-        for i in range(len(data)):
-            list2.insert(tkinter.END, ('' + data[i]))
-            if '.' not in data[i]:
-                list2.itemconfig(tkinter.END, fg='orange')
-            else:
-                list2.itemconfig(tkinter.END, fg='white')
+                             # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
+                             def recvList(lu):
+                             s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
+                             s.send(lu.encode())
+                             data = s.recv(4096)
+                             data = json.loads(data.decode())
+                             list2.delete(0, tkinter.END)  # 清空列表框
+                             lu = lu.split(os.path.sep)
+                             if len(lu) != 1:
+                             list2.insert(tkinter.END, 'Return to the previous dir')
+                             list2.itemconfig(0, fg='green')
+                             for i in range(len(data)):
+                             list2.insert(tkinter.END, ('' + data[i]))
+                             if '.' not in data[i]:
+                             list2.itemconfig(tkinter.END, fg='orange')
+                             else:
+                             list2.itemconfig(tkinter.END, fg='white')
 
-    # 创建标签显示服务端工作目录
-    def lab():
-        global label
-        data = s.recv(1024)  # 接收目录
-        lu = data.decode()
-        try:
-            label.destroy()
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        except:
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        recvList(lu)
+                             # 创建标签显示服务端工作目录
+                             def lab():
+                             global label
+                             data = s.recv(1024)  # 接收目录
+                             lu = data.decode()
+                             try:
+                             label.destroy()
+                             label = tkinter.Label(root, text=lu)
+                             label.place(x=580, y=0, )
+                             except:
+                             label = tkinter.Label(root, text=lu)
+                             label.place(x=580, y=0, )
+                             recvList(lu)
 
-    # 进入指定目录(cd)
-    def cd(dir):
-        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
-        s.send(dir.encode())
+                             # 进入指定目录(cd)
+                             def cd(dir):
+                             s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
+                             s.send(dir.encode())
 
-    # 刚连接上服务端时进行一次面板刷新
-    cd('same')
-    lab()
+                             # 刚连接上服务端时进行一次面板刷新
+                             cd('same')
+                             lab()
 
-    # 接收下载文件(get)
-    def get(name):
-        # print(message)
-        # 选择对话框, 选择文件的保存路径
-        fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
-        # 如果文件名非空才进行下载
-        if fileName:
-            s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
-            s.send(name.encode())
-            with open(fileName, 'wb') as f:
-                while True:
-                    data = s.recv(1024)
-                    if data == 'EOF'.encode():
-                        tkinter.messagebox.showinfo(title='Message',
-                                                    message='Download completed!')
-                        break
-                    f.write(data)
+                             # 接收下载文件(get)
+                             def get(name):
+                             # print(message)
+                             # 选择对话框, 选择文件的保存路径
+                             fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
+                             # 如果文件名非空才进行下载
+                             if fileName:
+                             s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
+                             s.send(name.encode())
+                             with open(fileName, 'wb') as f:
+                             while True:
+                             data = s.recv(1024)
+                             if data == 'EOF'.encode():
+                             tkinter.messagebox.showinfo(title='Message',
+                             message='Download completed!')
+                             break
+                             f.write(data)
 
-    # 创建用于绑定在列表框上的函数
-    def run(*args):
-        indexs = list2.curselection()
-        index = indexs[0]
-        content = list2.get(index)
-        # 如果有一个 . 则为文件
-        if '.' in content:
-            get(content)
-            cd('same')
-        elif content == 'Return to the previous dir':
-            cd('..')
-        else:
-            content = 'cd ' + content
-            cd(content)
-        lab()  # 刷新显示页面
+                             # 创建用于绑定在列表框上的函数
+                             def run(*args):
+                             indexs = list2.curselection()
+                             index = indexs[0]
+                             content = list2.get(index)
+                             # 如果有一个 . 则为文件
+                             if '.' in content:
+                             get(content)
+                             cd('same')
+                             elif content == 'Return to the previous dir':
+                             cd('..')
+                             else:
+                             content = 'cd ' + content
+                             cd(content)
+                             lab()  # 刷新显示页面
 
-    # 在列表框上设置绑定事件
-    list2.bind('<ButtonRelease-1>', run)
+                             # 在列表框上设置绑定事件
+                             list2.bind('<ButtonRelease-1>', run)
 
-    # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
-    def put():
-        # 选择对话框
-        fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
-        # 如果有选择文件才继续执行
-        if fileName:
-            name = fileName.split(os.path.sep)[-1]
-            # TODO introduce struct.pack to send command and data
-            command = 'put'
-            file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
-            header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
-            s.send(header)
-            s.send(file_header)
-            logging.warning("message %s sent to server" % file_header)
-            fo = open(fileName, 'rb')
-            while True:
-                filedata = fo.read(1024)
-                if not filedata:
-                    break
-                s.send(filedata)
-            fo.close()
-            # with open(fileName, 'rb') as f:
-            #     logging.warning("file %s opened" % fileName)
-            #     while True:
-            #         a = f.read(1024)
-            #         if not a:
-            #             break
-            #         s.send(a)
-            logging.warning("file sent")
-            tkinter.messagebox.showinfo(title='Message',
-                                        message='Upload completed!')
-        cd('same')
-        lab()  # 上传成功后刷新显示页面
+                             # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
+                             def put():
+                             # 选择对话框
+                             fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
+                             # 如果有选择文件才继续执行
+                             if fileName:
+                             name = fileName.split(os.path.sep)[-1]
+                             # TODO introduce struct.pack to send command and data
+                             command = 'put'
+                             file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
+                             header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
+                             s.send(header)
+                             s.send(file_header)
+                             logging.warning("message %s sent to server" % file_header)
+                             fo = open(fileName, 'rb')
+                             while True:
+                             filedata = fo.read(1024)
+                             if not filedata:
+                             break
+                             s.send(filedata)
+                             fo.close()
+                             # with open(fileName, 'rb') as f:
+                             #     logging.warning("file %s opened" % fileName)
+                             #     while True:
+                             #         a = f.read(1024)
+                             #         if not a:
+                             #             break
+                             #         s.send(a)
+                             logging.warning("file sent")
+                             tkinter.messagebox.showinfo(title='Message',
+                             message='Upload completed!')
+                             cd('same')
+                             lab()  # 上传成功后刷新显示页面
 
-    # 创建上传按钮, 并绑定上传文件功能
-    upload = tkinter.Button(root, text='Upload file', command=put)
-    upload.place(x=600, y=353, height=30, width=80)
+                             # 创建上传按钮, 并绑定上传文件功能
+                             upload = tkinter.Button(root, text='Upload file', command=put)
+                             upload.place(x=600, y=353, height=30, width=80)
 
-    # 关闭文件管理器, 待完善
-    def closeFile():
-        root['height'] = 390
-        root['width'] = 580
-        # 关闭连接
-        header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
-        s.send(header)
-        s.close()
+                             # 关闭文件管理器, 待完善
+                             def closeFile():
+                             root['height'] = 390
+                             root['width'] = 580
+                             # 关闭连接
+                             header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
+                             s.send(header)
+                             s.close()
 
-    # 创建关闭按钮
-    close = tkinter.Button(root, text='Close', command=closeFile)
-    close.place(x=685, y=353, height=30, width=70)
+                             # 创建关闭按钮
+                             close = tkinter.Button(root, text='Close', command=closeFile)
+                             close.place(x=685, y=353, height=30, width=70)
 
 
 def UDTfileClient():

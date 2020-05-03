@@ -1,6 +1,4 @@
 import json  # json.dumps(some)打包   json.loads(some)解包
-from udt_video_client import register_video_client
-from message.message_pb2 import message
 import logging
 import os
 import socket
@@ -14,13 +12,12 @@ from tkinter import filedialog
 from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的包
 
 import udt
-from netifaces import interfaces, ifaddresses, AF_INET6
 
-import vachat
+from message.message_pb2 import message
+from udt_video_utils import *
 
-EXIT = False
 IP = ''
-PORT = ''
+PORT = 50007
 username = ''
 listbox1 = ''  # 用于显示在线用户的列表框
 ii = 0  # 用于判断是开还是关闭列表框
@@ -28,30 +25,30 @@ users = []  # 在线用户列表
 chat = '------Group chat-------'  # 聊天对象, 默认为群聊
 
 # 登陆窗口
-root1 = tkinter.Tk()
-root1.tk.call('tk', 'scaling', 6.0)
-root1.title('Log in')
-root1['height'] = 110
-root1['width'] = 270
-root1.resizable(0, 0)  # 限制窗口大小
+login_window = tkinter.Tk()
+login_window.tk.call('tk', 'scaling', 6.0)
+login_window.title('Log in')
+login_window['height'] = 110
+login_window['width'] = 270
+login_window.resizable(0, 0)  # 限制窗口大小
 
 IP1 = tkinter.StringVar()
-IP1.set('127.0.0.1:50007')  # 默认显示的ip和端口
+IP1.set('127.0.0.1:%d' % PORT)  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 
 # 服务器标签
-labelIP = tkinter.Label(root1, text='Server address')
+labelIP = tkinter.Label(login_window, text='Server address')
 labelIP.place(x=20, y=10, width=100, height=20)
 
-entryIP = tkinter.Entry(root1, width=80, textvariable=IP1)
+entryIP = tkinter.Entry(login_window, width=80, textvariable=IP1)
 entryIP.place(x=120, y=10, width=130, height=20)
 
 # 用户名标签
-labelUser = tkinter.Label(root1, text='Username')
+labelUser = tkinter.Label(login_window, text='Username')
 labelUser.place(x=30, y=40, width=80, height=20)
 
-entryUser = tkinter.Entry(root1, width=80, textvariable=User)
+entryUser = tkinter.Entry(login_window, width=80, textvariable=User)
 entryUser.place(x=120, y=40, width=130, height=20)
 
 
@@ -64,25 +61,25 @@ def login(*args):
     if not username:
         tkinter.messagebox.showerror('Name type error', message='Username Empty!')
     else:
-        root1.destroy()  # 关闭窗口
+        login_window.destroy()  # 关闭窗口
 
 
-root1.bind('<Return>', login)  # 回车绑定登录功能
-but = tkinter.Button(root1, text='Log in', command=login)
+login_window.bind('<Return>', login)  # 回车绑定登录功能
+but = tkinter.Button(login_window, text='Log in', command=login)
 but.place(x=100, y=70, width=70, height=30)
 
-root1.mainloop()
+login_window.mainloop()
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-s.connect((IP, PORT))
+chat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+chat_socket.connect((IP, PORT))
 if username:
-    s.send(username.encode())  # 发送用户名
+    chat_socket.send(username.encode())  # 发送用户名
 else:
-    s.send('no'.encode())  # 没有输入用户名则标记no
+    chat_socket.send('no'.encode())  # 没有输入用户名则标记no
 
 # 如果没有用户名则将ip和端口号设置为用户名
-addr = s.getsockname()  # 获取客户端ip和端口号
+addr = chat_socket.getsockname()  # 获取客户端ip和端口号
 addr = addr[0] + ':' + str(addr[1])
 if username == '':
     username = addr
@@ -127,7 +124,7 @@ upload = ''  # 上传按钮
 close = ''  # 关闭按钮
 
 
-def fileClient():
+def tcp_file_client():
     PORT2 = 50008  # 聊天室的端口为50007
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -184,7 +181,6 @@ def fileClient():
 
     # 接收下载文件(get)
     def get(name):
-        # print(message)
         # 选择对话框, 选择文件的保存路径
         fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
         # 如果文件名非空才进行下载
@@ -271,12 +267,12 @@ def fileClient():
     close.place(x=685, y=353, height=30, width=70)
 
 
-def UDTfileClient():
-    PORT2 = 50008  # 聊天室的端口为50007
+def udt_file_client():
+    udt_file_port = PORT + 1  # 聊天室的端口为50007
     s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     logging.warning("UDT socket created")
-    s.connect((IP, PORT2))
-    logging.warning("UDT socket connected to %s:%s" % (IP, PORT2))
+    s.connect((IP, udt_file_port))
+    logging.warning("UDT socket connected to %s:%s" % (IP, udt_file_port))
 
     # 创建UDT file pannel
     udt_pannel = tkinter.Tk()
@@ -392,7 +388,7 @@ def UDTfileClient():
 
 
 # 创建文件按钮
-udt_file_button = tkinter.Button(root, text='UDT File', command=UDTfileClient)
+udt_file_button = tkinter.Button(root, text='UDT File', command=udt_file_client)
 udt_file_button.place(x=185, y=320, width=60, height=30)
 
 # 创建多行文本框, 显示在线用户
@@ -421,7 +417,7 @@ entry = tkinter.Entry(root, width=120, textvariable=a)
 entry.place(x=5, y=350, width=570, height=40)
 
 
-def send(*args):
+def send_text(*args):
     # 没有添加的话发送信息时会提示没有聊天对象
     users.append('------Group chat-------')
     # users.append('Robot')
@@ -434,23 +430,26 @@ def send(*args):
         return
     # TODO Add Chinese support
     mes = entry.get() + ':;' + username + ':;' + chat  # 添加聊天对象标记
-    s.send(mes.encode())
+    chat_socket.send(mes.encode())
     a.set('')  # 发送后清空文本框
 
 
 # 创建发送按钮
-button = tkinter.Button(root, text='Send', command=send)
-button.place(x=515, y=353, width=60, height=30)
-root.bind('<Return>', send)  # 绑定回车发送信息
+button_sendtext = tkinter.Button(root, text='Send', command=send_text)
+button_sendtext.place(x=515, y=353, width=60, height=30)
+root.bind('<Return>', send_text)  # 绑定回车发送信息
 
-video_socket = register_video_client("127.0.0.1", 50009, username)
 
-# 视频聊天部分
-IsOpen = False  # 判断视频/音频的服务器是否已打开
-Resolution = 0  # 图像传输的分辨率 0-4依次递减
-Version = 4  # 传输协议版本 IPv4/IPv6
-ShowMe = True  # 视频聊天时是否打开本地摄像头
-AudioOpen = True  # 是否打开音频聊天
+# video chatting part
+video_socket = register_video_client("127.0.0.1", PORT + 2, username)
+
+
+def send_video():
+    pass
+
+
+button_sendvideo = tkinter.Button(root, text='Video', command=send_video)
+button_sendvideo.place(x=245, y=320, width=60, height=30)
 
 
 # 私聊功能
@@ -474,13 +473,10 @@ listbox1.bind('<ButtonRelease-1>', private)
 
 
 # 用于时刻接收服务端发送的信息并打印
-def recv():
+def recv_text():
     global users, EXIT
     while True:
-        if EXIT:
-            s.close()
-            break
-        data = s.recv(1024)
+        data = chat_socket.recv(1024)
         data = data.decode()
         # 没有捕获到异常则表示接收到的是在线用户列表
         try:
@@ -528,10 +524,7 @@ def recv():
 
 # 用于时刻接收视频聊天邀请
 def recv_video():
-    header_length = int.from_bytes(video_socket.recv(4, 0), 'little')
-    header_message_string = video_socket.recv(header_length, 0)
-    header = message()
-    header.ParseFromString(header_message_string)
+    header = recv_command(video_socket)
     logging.warning("received message %s from server" % header.message)
     if header.message == "invitation":
         invite_window = tkinter.Toplevel()
@@ -548,9 +541,7 @@ def recv_video():
             accept_message = message()
             accept_message.username = username
             accept_message.message = "accept"
-            accept_proto = accept_message.SerializeToString()
-            s.send(len(accept_proto).to_bytes(4, 'little'), 0)
-            s.send(accept_proto, 0)
+            send_command(accept_message, video_socket)
 
         def refuse_invite():
             invite_window.destroy()
@@ -558,21 +549,19 @@ def recv_video():
             refuse_message = message()
             refuse_message.username = username
             refuse_message.message = "refuse"
-            refuse_proto = refuse_message.SerializeToString()
-            s.send(len(refuse_proto).to_bytes(4, 'little'), 0)
-            s.send(refuse_proto, 0)
+            send_command(refuse_message, video_socket)
 
-        Refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
-        Refuse.place(x=60, y=60, width=60, height=25)
-        Accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
-        Accept.place(x=180, y=60, width=60, height=25)
+        button_refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
+        button_refuse.place(x=60, y=60, width=60, height=25)
+        button_accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
+        button_accept.place(x=180, y=60, width=60, height=25)
 
 
-r_chat = threading.Thread(target=recv)
+r_chat = threading.Thread(target=recv_text)
 r_chat.start()  # 开始线程接收信息
 
-# r_video = threading.Thread(target=recv_video)
-# r_video.start()
+r_video = threading.Thread(target=recv_video)
+r_video.start()
 
 root.mainloop()
-s.close()  # 关闭图形界面后关闭TCP连接
+chat_socket.close()  # 关闭图形界面后关闭TCP连接

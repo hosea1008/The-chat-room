@@ -14,8 +14,19 @@ def register_video_client(server_addr, server_port, username):
     hello_message = message()
     hello_message.message = "hello"
     hello_message.username = username
-    hello_data = hello_message.SerializeToString()
-    s.send(len(hello_data).to_bytes(4, 'little'), 0)
-    s.send(hello_data, 0)
-
+    send_command(hello_message, s)
     return s
+
+
+def recv_command(conn):
+    header_length = int.from_bytes(conn.recv(4, 0), 'little')
+    header_message_string = conn.recv(header_length, 0)
+    command = message()
+    command.ParseFromString(header_message_string)
+    return command
+
+
+def send_command(command, conn):
+    command_proto = command.SerializeToString()
+    conn.send(len(command_proto).to_bytes(4, 'little'), 0)
+    conn.send(command_proto, 0)

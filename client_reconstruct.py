@@ -107,156 +107,156 @@ class ChatClient():
         root.mainloop()
 
 
-# 文件功能代码部分
-# 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
-list2 = ''  # 列表框
-label = ''  # 显示路径的标签
-upload = ''  # 上传按钮
-close = ''  # 关闭按钮
+        # 文件功能代码部分
+        # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
+        list2 = ''  # 列表框
+        label = ''  # 显示路径的标签
+        upload = ''  # 上传按钮
+        close = ''  # 关闭按钮
 
 
-        def fileClient():
-                             PORT2 = 50008  # 聊天室的端口为50007
-                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                             s.connect((IP, PORT2))
+    def fileClient(self):
+         tcp_file_port = self.server_port + 1  # 聊天室的端口为50007
+         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+         s.connect((self.serv, tcp_file_port))
 
-                             # 修改root窗口大小显示文件管理的组件
-                             root['height'] = 390
-                             root['width'] = 760
+         # 修改root窗口大小显示文件管理的组件
+         root['height'] = 390
+         root['width'] = 760
 
-                             # 创建列表框
-                             list2 = tkinter.Listbox(root)
-                             list2.place(x=580, y=25, width=300, height=325)
+         # 创建列表框
+         list2 = tkinter.Listbox(root)
+         list2.place(x=580, y=25, width=300, height=325)
 
-                             # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
-                             def recvList(lu):
-                             s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
-                             s.send(lu.encode())
-                             data = s.recv(4096)
-                             data = json.loads(data.decode())
-                             list2.delete(0, tkinter.END)  # 清空列表框
-                             lu = lu.split(os.path.sep)
-                             if len(lu) != 1:
-                             list2.insert(tkinter.END, 'Return to the previous dir')
-                             list2.itemconfig(0, fg='green')
-                             for i in range(len(data)):
-                             list2.insert(tkinter.END, ('' + data[i]))
-                             if '.' not in data[i]:
-                             list2.itemconfig(tkinter.END, fg='orange')
-                             else:
-                             list2.itemconfig(tkinter.END, fg='white')
+         # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
+         def recvList(lu):
+         s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
+         s.send(lu.encode())
+         data = s.recv(4096)
+         data = json.loads(data.decode())
+         list2.delete(0, tkinter.END)  # 清空列表框
+         lu = lu.split(os.path.sep)
+         if len(lu) != 1:
+         list2.insert(tkinter.END, 'Return to the previous dir')
+         list2.itemconfig(0, fg='green')
+         for i in range(len(data)):
+         list2.insert(tkinter.END, ('' + data[i]))
+         if '.' not in data[i]:
+         list2.itemconfig(tkinter.END, fg='orange')
+         else:
+         list2.itemconfig(tkinter.END, fg='white')
 
-                             # 创建标签显示服务端工作目录
-                             def lab():
-                             global label
-                             data = s.recv(1024)  # 接收目录
-                             lu = data.decode()
-                             try:
-                             label.destroy()
-                             label = tkinter.Label(root, text=lu)
-                             label.place(x=580, y=0, )
-                             except:
-                             label = tkinter.Label(root, text=lu)
-                             label.place(x=580, y=0, )
-                             recvList(lu)
+         # 创建标签显示服务端工作目录
+         def lab():
+         global label
+         data = s.recv(1024)  # 接收目录
+         lu = data.decode()
+         try:
+         label.destroy()
+         label = tkinter.Label(root, text=lu)
+         label.place(x=580, y=0, )
+         except:
+         label = tkinter.Label(root, text=lu)
+         label.place(x=580, y=0, )
+         recvList(lu)
 
-                             # 进入指定目录(cd)
-                             def cd(dir):
-                             s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
-                             s.send(dir.encode())
+         # 进入指定目录(cd)
+         def cd(dir):
+         s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
+         s.send(dir.encode())
 
-                             # 刚连接上服务端时进行一次面板刷新
-                             cd('same')
-                             lab()
+         # 刚连接上服务端时进行一次面板刷新
+         cd('same')
+         lab()
 
-                             # 接收下载文件(get)
-                             def get(name):
-                             # print(message)
-                             # 选择对话框, 选择文件的保存路径
-                             fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
-                             # 如果文件名非空才进行下载
-                             if fileName:
-                             s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
-                             s.send(name.encode())
-                             with open(fileName, 'wb') as f:
-                             while True:
-                             data = s.recv(1024)
-                             if data == 'EOF'.encode():
-                             tkinter.messagebox.showinfo(title='Message',
-                             message='Download completed!')
-                             break
-                             f.write(data)
+         # 接收下载文件(get)
+         def get(name):
+         # print(message)
+         # 选择对话框, 选择文件的保存路径
+         fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
+         # 如果文件名非空才进行下载
+         if fileName:
+         s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
+         s.send(name.encode())
+         with open(fileName, 'wb') as f:
+         while True:
+         data = s.recv(1024)
+         if data == 'EOF'.encode():
+         tkinter.messagebox.showinfo(title='Message',
+         message='Download completed!')
+         break
+         f.write(data)
 
-                             # 创建用于绑定在列表框上的函数
-                             def run(*args):
-                             indexs = list2.curselection()
-                             index = indexs[0]
-                             content = list2.get(index)
-                             # 如果有一个 . 则为文件
-                             if '.' in content:
-                             get(content)
-                             cd('same')
-                             elif content == 'Return to the previous dir':
-                             cd('..')
-                             else:
-                             content = 'cd ' + content
-                             cd(content)
-                             lab()  # 刷新显示页面
+         # 创建用于绑定在列表框上的函数
+         def run(*args):
+         indexs = list2.curselection()
+         index = indexs[0]
+         content = list2.get(index)
+         # 如果有一个 . 则为文件
+         if '.' in content:
+         get(content)
+         cd('same')
+         elif content == 'Return to the previous dir':
+         cd('..')
+         else:
+         content = 'cd ' + content
+         cd(content)
+         lab()  # 刷新显示页面
 
-                             # 在列表框上设置绑定事件
-                             list2.bind('<ButtonRelease-1>', run)
+         # 在列表框上设置绑定事件
+         list2.bind('<ButtonRelease-1>', run)
 
-                             # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
-                             def put():
-                             # 选择对话框
-                             fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
-                             # 如果有选择文件才继续执行
-                             if fileName:
-                             name = fileName.split(os.path.sep)[-1]
-                             # TODO introduce struct.pack to send command and data
-                             command = 'put'
-                             file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
-                             header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
-                             s.send(header)
-                             s.send(file_header)
-                             logging.warning("message %s sent to server" % file_header)
-                             fo = open(fileName, 'rb')
-                             while True:
-                             filedata = fo.read(1024)
-                             if not filedata:
-                             break
-                             s.send(filedata)
-                             fo.close()
-                             # with open(fileName, 'rb') as f:
-                             #     logging.warning("file %s opened" % fileName)
-                             #     while True:
-                             #         a = f.read(1024)
-                             #         if not a:
-                             #             break
-                             #         s.send(a)
-                             logging.warning("file sent")
-                             tkinter.messagebox.showinfo(title='Message',
-                             message='Upload completed!')
-                             cd('same')
-                             lab()  # 上传成功后刷新显示页面
+         # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
+         def put():
+         # 选择对话框
+         fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
+         # 如果有选择文件才继续执行
+         if fileName:
+         name = fileName.split(os.path.sep)[-1]
+         # TODO introduce struct.pack to send command and data
+         command = 'put'
+         file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
+         header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
+         s.send(header)
+         s.send(file_header)
+         logging.warning("message %s sent to server" % file_header)
+         fo = open(fileName, 'rb')
+         while True:
+         filedata = fo.read(1024)
+         if not filedata:
+         break
+         s.send(filedata)
+         fo.close()
+         # with open(fileName, 'rb') as f:
+         #     logging.warning("file %s opened" % fileName)
+         #     while True:
+         #         a = f.read(1024)
+         #         if not a:
+         #             break
+         #         s.send(a)
+         logging.warning("file sent")
+         tkinter.messagebox.showinfo(title='Message',
+         message='Upload completed!')
+         cd('same')
+         lab()  # 上传成功后刷新显示页面
 
-                             # 创建上传按钮, 并绑定上传文件功能
-                             upload = tkinter.Button(root, text='Upload file', command=put)
-                             upload.place(x=600, y=353, height=30, width=80)
+         # 创建上传按钮, 并绑定上传文件功能
+         upload = tkinter.Button(root, text='Upload file', command=put)
+         upload.place(x=600, y=353, height=30, width=80)
 
-                             # 关闭文件管理器, 待完善
-                             def closeFile():
-                             root['height'] = 390
-                             root['width'] = 580
-                             # 关闭连接
-                             header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
-                             s.send(header)
-                             s.close()
+         # 关闭文件管理器, 待完善
+         def closeFile():
+         root['height'] = 390
+         root['width'] = 580
+         # 关闭连接
+         header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
+         s.send(header)
+         s.close()
 
-                             # 创建关闭按钮
-                             close = tkinter.Button(root, text='Close', command=closeFile)
-                             close.place(x=685, y=353, height=30, width=70)
+         # 创建关闭按钮
+         close = tkinter.Button(root, text='Close', command=closeFile)
+         close.place(x=685, y=353, height=30, width=70)
 
 
 def UDTfileClient():
@@ -585,125 +585,125 @@ AudioOpen = True  # 是否打开音频聊天
 # vbutton.place(x=245, y=320, width=60, height=30)
 
 
-# 私聊功能
-def private(*args):
-    global chat
-    # 获取点击的索引然后得到内容(用户名)
-    indexs = listbox1.curselection()
-    index = indexs[0]
-    if index > 0:
-        chat = listbox1.get(index)
-        # 修改客户端名称
-        if chat == '------Group chat-------':
-            root.title(username)
-            return
-        ti = username + '  -->  ' + chat
-        root.title(ti)
+        # 私聊功能
+        def private(*args):
+            global chat
+            # 获取点击的索引然后得到内容(用户名)
+            indexs = listbox1.curselection()
+            index = indexs[0]
+            if index > 0:
+                chat = listbox1.get(index)
+                # 修改客户端名称
+                if chat == '------Group chat-------':
+                    root.title(username)
+                    return
+                ti = username + '  -->  ' + chat
+                root.title(ti)
 
 
 # 在显示用户列表框上设置绑定事件
 listbox1.bind('<ButtonRelease-1>', private)
 
 
-# 用于时刻接收服务端发送的信息并打印
-def recv():
-    global users, EXIT
-    while True:
-        if EXIT:
-            s.close()
-            break
-        data = s.recv(1024)
-        data = data.decode()
-        # 没有捕获到异常则表示接收到的是在线用户列表
-        try:
-            data = json.loads(data)
-            users = data
-            listbox1.delete(0, tkinter.END)  # 清空列表框
-            number = ('   Users online: ' + str(len(data)))
-            listbox1.insert(tkinter.END, number)
-            listbox1.itemconfig(tkinter.END, fg='green', bg="#f0f0ff")
-            listbox1.insert(tkinter.END, '------Group chat-------')
-            listbox1.itemconfig(tkinter.END, fg='green')
-            for i in range(len(data)):
-                listbox1.insert(tkinter.END, (data[i]))
+    # 用于时刻接收服务端发送的信息并打印
+    def recv(self):
+        global users, EXIT
+        while True:
+            if EXIT:
+                s.close()
+                break
+            data = s.recv(1024)
+            data = data.decode()
+            # 没有捕获到异常则表示接收到的是在线用户列表
+            try:
+                data = json.loads(data)
+                users = data
+                listbox1.delete(0, tkinter.END)  # 清空列表框
+                number = ('   Users online: ' + str(len(data)))
+                listbox1.insert(tkinter.END, number)
+                listbox1.itemconfig(tkinter.END, fg='green', bg="#f0f0ff")
+                listbox1.insert(tkinter.END, '------Group chat-------')
                 listbox1.itemconfig(tkinter.END, fg='green')
-        except:
-            data = data.split(':;')
-            data1 = data[0].strip()  # 消息
-            data2 = data[1]  # 发送信息的用户名
-            data3 = data[2]  # 聊天对象
-            # if 'INVITE' in data1:
-            #     if data3 == '------Group chat-------':
-            #         tkinter.messagebox.showerror('Connect error', message='Group video chat is not supported!')
-            #     elif (data2 == username and data3 == username) or (data2 != username):
-            #         video_invite_window(data1, data2)
-            #     continue
-            markk = data1.split(': ')[1]
-            # 判断是不是图片
-            pic = markk.split('#')
-            if pic[0] == '``':
-                data4 = '\n' + data2 + ': '  # 例:名字-> \n名字：
-                if data3 == '------Group chat-------':
-                    if data2 == username:  # 如果是自己则将则字体变为蓝色
-                        listbox.insert(tkinter.END, data4, 'blue')
-                    else:
-                        listbox.insert(tkinter.END, data4, 'green')  # END将信息加在最后一行
-                elif data2 == username or data3 == username:  # 显示私聊
-                    listbox.insert(tkinter.END, data4, 'red')  # END将信息加在最后一行
-            else:
-                data1 = '\n' + data1
-                if data3 == '------Group chat-------':
-                    if data2 == username:  # 如果是自己则将则字体变为蓝色
-                        listbox.insert(tkinter.END, data1, 'green')
-                    else:
-                        listbox.insert(tkinter.END, data1, 'yellow')  # END将信息加在最后一行
-                    if len(data) == 4:
-                        listbox.insert(tkinter.END, '\n' + data[3], 'pink')
-                elif data2 == username or data3 == username:  # 显示私聊
-                    listbox.insert(tkinter.END, data1, 'red')  # END将信息加在最后一行
-            listbox.see(tkinter.END)  # 显示在最后
+                for i in range(len(data)):
+                    listbox1.insert(tkinter.END, (data[i]))
+                    listbox1.itemconfig(tkinter.END, fg='green')
+            except:
+                data = data.split(':;')
+                data1 = data[0].strip()  # 消息
+                data2 = data[1]  # 发送信息的用户名
+                data3 = data[2]  # 聊天对象
+                # if 'INVITE' in data1:
+                #     if data3 == '------Group chat-------':
+                #         tkinter.messagebox.showerror('Connect error', message='Group video chat is not supported!')
+                #     elif (data2 == username and data3 == username) or (data2 != username):
+                #         video_invite_window(data1, data2)
+                #     continue
+                markk = data1.split(': ')[1]
+                # 判断是不是图片
+                pic = markk.split('#')
+                if pic[0] == '``':
+                    data4 = '\n' + data2 + ': '  # 例:名字-> \n名字：
+                    if data3 == '------Group chat-------':
+                        if data2 == username:  # 如果是自己则将则字体变为蓝色
+                            listbox.insert(tkinter.END, data4, 'blue')
+                        else:
+                            listbox.insert(tkinter.END, data4, 'green')  # END将信息加在最后一行
+                    elif data2 == username or data3 == username:  # 显示私聊
+                        listbox.insert(tkinter.END, data4, 'red')  # END将信息加在最后一行
+                else:
+                    data1 = '\n' + data1
+                    if data3 == '------Group chat-------':
+                        if data2 == username:  # 如果是自己则将则字体变为蓝色
+                            listbox.insert(tkinter.END, data1, 'green')
+                        else:
+                            listbox.insert(tkinter.END, data1, 'yellow')  # END将信息加在最后一行
+                        if len(data) == 4:
+                            listbox.insert(tkinter.END, '\n' + data[3], 'pink')
+                    elif data2 == username or data3 == username:  # 显示私聊
+                        listbox.insert(tkinter.END, data1, 'red')  # END将信息加在最后一行
+                listbox.see(tkinter.END)  # 显示在最后
 
 
-# 用于时刻接收视频聊天邀请
-def recv_video():
-    header_length = int.from_bytes(video_socket.recv(4, 0), 'little')
-    header_message_string = video_socket.recv(header_length, 0)
-    header = message()
-    header.ParseFromString(header_message_string)
-    logging.warning("received message %s from server" % header.message)
-    if header.message == "invitation":
-        invite_window = tkinter.Toplevel()
-        invite_window.geometry('300x100')
-        invite_window.title("Invitation")
-        label1 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text=header.username)
-        label1.pack()
-        label2 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text='invites you to video chat!')
-        label2.pack()
+        # 用于时刻接收视频聊天邀请
+        def recv_video():
+            header_length = int.from_bytes(video_socket.recv(4, 0), 'little')
+            header_message_string = video_socket.recv(header_length, 0)
+            header = message()
+            header.ParseFromString(header_message_string)
+            logging.warning("received message %s from server" % header.message)
+            if header.message == "invitation":
+                invite_window = tkinter.Toplevel()
+                invite_window.geometry('300x100')
+                invite_window.title("Invitation")
+                label1 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text=header.username)
+                label1.pack()
+                label2 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text='invites you to video chat!')
+                label2.pack()
 
-        def accept_invite():
-            invite_window.destroy()
-            logging.warning("accepted video invitation")
-            accept_message = message()
-            accept_message.username = username
-            accept_message.message = "accept"
-            accept_proto = accept_message.SerializeToString()
-            s.send(len(accept_proto).to_bytes(4, 'little'), 0)
-            s.send(accept_proto, 0)
+                def accept_invite():
+                    invite_window.destroy()
+                    logging.warning("accepted video invitation")
+                    accept_message = message()
+                    accept_message.username = username
+                    accept_message.message = "accept"
+                    accept_proto = accept_message.SerializeToString()
+                    s.send(len(accept_proto).to_bytes(4, 'little'), 0)
+                    s.send(accept_proto, 0)
 
-        def refuse_invite():
-            invite_window.destroy()
-            logging.warning("refused video invitation")
-            refuse_message = message()
-            refuse_message.username = username
-            refuse_message.message = "refuse"
-            refuse_proto = refuse_message.SerializeToString()
-            s.send(len(refuse_proto).to_bytes(4, 'little'), 0)
-            s.send(refuse_proto, 0)
+                def refuse_invite():
+                    invite_window.destroy()
+                    logging.warning("refused video invitation")
+                    refuse_message = message()
+                    refuse_message.username = username
+                    refuse_message.message = "refuse"
+                    refuse_proto = refuse_message.SerializeToString()
+                    s.send(len(refuse_proto).to_bytes(4, 'little'), 0)
+                    s.send(refuse_proto, 0)
 
-        Refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
-        Refuse.place(x=60, y=60, width=60, height=25)
-        Accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
-        Accept.place(x=180, y=60, width=60, height=25)
+                Refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
+                Refuse.place(x=60, y=60, width=60, height=25)
+                Accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
+                Accept.place(x=180, y=60, width=60, height=25)
 
 
 r_chat = threading.Thread(target=recv)

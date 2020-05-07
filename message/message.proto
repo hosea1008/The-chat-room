@@ -2,7 +2,7 @@ syntax = "proto3";
 package message;
 
 message message {
-  int64 messageLength = 1;
+  uint32 messageLength = 1;
   string message = 2;
   string username = 3;
   string address = 4;

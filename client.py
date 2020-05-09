@@ -461,7 +461,7 @@ def send_video():
             data_header.messageLength = int(len(test_video_data))
             data_header.username = username
             udt_send_command(data_header, video_socket)
-            video_socket.send(test_video_data, 0)
+            video_socket.send(test_video_data)
             time.sleep(0.2)
 
         finish_comamd = message()
@@ -546,24 +546,23 @@ def recv_text():
             listbox.see(tkinter.END)  # 显示在最后
 
 
-test_socket = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-test_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-test_socket.connect(("127.0.0.1", 50011))
+# test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# test_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# test_socket.connect(("127.0.0.1", 50011))
 
 
-def recv_video_test():
-    while True:
-        readable, writable, exceptional = select.select([test_socket], [], [test_socket])
-        for data in readable:
-            if data is bytes:
-                print("data: %s" % data)
-            else:
-                print(data)
+# def recv_video_test():
+#     while True:
+#         readable, writable, exceptional = select.select([test_socket], [], [test_socket])
+#         for data in readable:
+#             if data is bytes:
+#                 print("data: %s" % data)
+#             else:
+#                 print(data)
 
 
 # 用于时刻接收视频聊天邀请
 def recv_video():
-    time.sleep(0.5)
     logging.warning("video command receiver started..")
     header = udt_recv_command(video_socket)
     logging.warning("received message %s from server" % header.message)
@@ -601,7 +600,7 @@ def recv_video():
 r_chat = threading.Thread(target=recv_text)
 r_chat.start()  # 开始线程接收信息
 
-r_video = threading.Thread(target=recv_video_test)
+r_video = threading.Thread(target=recv_video)
 r_video.start()
 
 root.mainloop()

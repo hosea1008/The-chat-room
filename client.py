@@ -1,5 +1,6 @@
 import json  # json.dumps(some)打包   json.loads(some)解包
 import logging
+import uuid
 import os
 import select
 import socket
@@ -441,14 +442,15 @@ button_sendtext.place(x=515, y=353, width=60, height=30)
 root.bind('<Return>', send_text)  # 绑定回车发送信息
 
 # video chatting part
-video_socket = register_video_client("127.0.0.1", PORT + 2, username)
+client_uuid = str(uuid.uuid4())
+video_tcp_socket, video_udt_socket = register_video_client("127.0.0.1", PORT + 2, PORT + 3, username, client_uuid)
 
 
 def send_video():
     invitation = message()
     invitation.message = "invitation"
     invitation.username = username
-    udt_send_command(invitation, video_socket)
+    tcp_send_command(invitation, video_tcp_socket)
 
 
 button_sendvideo = tkinter.Button(root, text='Video', command=send_video)
@@ -529,7 +531,7 @@ def recv_text():
 def recv_video():
     logging.warning("video command receiver started..")
     while True:
-        header = udt_recv_command(video_socket)
+        header = tcp_recv_command(video_tcp_socket)
         logging.warning("received message %s from server" % header.message)
         if header.message == "invitation":
             invite_window = tkinter.Toplevel()
@@ -537,8 +539,6 @@ def recv_video():
             invite_window.title("Invitation")
             label1 = tkinter.Label(invite_window, text="%s invites you to video chat" % header.username)
             label1.pack()
-            # label2 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text='invites you to video chat!')
-            # label2.pack()
 
             def accept_invite():
                 invite_window.destroy()
@@ -546,7 +546,7 @@ def recv_video():
                 accept_message = message()
                 accept_message.username = username
                 accept_message.message = "accept"
-                udt_send_command(accept_message, video_socket)
+                tcp_send_command(accept_message, video_tcp_socket)
 
             def refuse_invite():
                 invite_window.destroy()
@@ -554,7 +554,7 @@ def recv_video():
                 refuse_message = message()
                 refuse_message.username = username
                 refuse_message.message = "refuse"
-                udt_send_command(refuse_message, video_socket)
+                tcp_send_command(refuse_message, video_tcp_socket)
 
             button_refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
             button_refuse.place(x=60, y=60, width=60, height=25)
@@ -571,7 +571,7 @@ def recv_video():
             finish_command = message()
             finish_command.message = "videofinish"
             finish_command.username = username
-            udt_send_command(finish_command, video_socket)
+            tcp_send_command(finish_command, video_tcp_socket)
         elif header.message == "videoNotAvailable":
             logging.warning("%s is sharing video, not approved" % header.username)
             tkinter.messagebox.showerror('Rejected', message="Video share rejected, %s is sharing video" % header.username)

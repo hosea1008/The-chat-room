@@ -19,7 +19,7 @@ def register_video_client(server_addr, server_port, username):
 
 
 def udt_recv_command(conn):
-    header_length = int.from_bytes(conn.recv(4), 'little')
+    header_length = int.from_bytes(conn.recv(4), 'big')
     header_message_string = conn.recv(header_length)
     command = message()
     command.ParseFromString(header_message_string)
@@ -28,5 +28,5 @@ def udt_recv_command(conn):
 
 def udt_send_command(command, conn):
     command_proto = command.SerializeToString()
-    conn.send(len(command_proto).to_bytes(4, 'little'))
+    conn.send(len(command_proto).to_bytes(4, 'big'))
     conn.send(command_proto)

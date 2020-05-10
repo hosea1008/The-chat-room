@@ -450,27 +450,6 @@ def send_video():
     invitation.username = username
     udt_send_command(invitation, video_socket)
 
-    approval = udt_recv_command(video_socket)
-    if approval.message == "videoAvailable":
-        logging.warning("video sharing approved")
-
-        for i in range(500):
-            test_video_data = b"testing video data"
-            data_header = message()
-            data_header.message = "data"
-            data_header.messageLength = int(len(test_video_data))
-            data_header.username = username
-            udt_send_command(data_header, video_socket)
-            video_socket.send(test_video_data)
-            time.sleep(0.2)
-
-        finish_comamd = message()
-        finish_comamd.message = "finish"
-
-    elif approval.message == "videoNotAvailable":
-        logging.warning("%s is sharing video, not approved" % approval.username)
-        tkinter.messagebox.showerror("Video share NOT approved, %s is sharing video" % approval.username)
-
 
 button_sendvideo = tkinter.Button(root, text='Video', command=send_video)
 button_sendvideo.place(x=245, y=320, width=60, height=30)
@@ -546,55 +525,56 @@ def recv_text():
             listbox.see(tkinter.END)  # 显示在最后
 
 
-# test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# test_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-# test_socket.connect(("127.0.0.1", 50011))
-
-
-# def recv_video_test():
-#     while True:
-#         readable, writable, exceptional = select.select([test_socket], [], [test_socket])
-#         for data in readable:
-#             if data is bytes:
-#                 print("data: %s" % data)
-#             else:
-#                 print(data)
-
-
 # 用于时刻接收视频聊天邀请
 def recv_video():
     logging.warning("video command receiver started..")
-    header = udt_recv_command(video_socket)
-    logging.warning("received message %s from server" % header.message)
-    if header.message == "invitation":
-        invite_window = tkinter.Toplevel()
-        invite_window.geometry('300x100')
-        invite_window.title("Invitation")
-        label1 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text=header.username)
-        label1.pack()
-        label2 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text='invites you to video chat!')
-        label2.pack()
+    while True:
+        header = udt_recv_command(video_socket)
+        logging.warning("received message %s from server" % header.message)
+        if header.message == "invitation":
+            invite_window = tkinter.Toplevel()
+            invite_window.geometry('300x100')
+            invite_window.title("Invitation")
+            label1 = tkinter.Label(invite_window, text="%s invites you to video chat" % header.username)
+            label1.pack()
+            # label2 = tkinter.Label(invite_window, bg='#f0f0f0', width=20, text='invites you to video chat!')
+            # label2.pack()
 
-        def accept_invite():
-            invite_window.destroy()
-            logging.warning("accepted video invitation")
-            accept_message = message()
-            accept_message.username = username
-            accept_message.message = "accept"
-            udt_send_command(accept_message, video_socket)
+            def accept_invite():
+                invite_window.destroy()
+                logging.warning("accepted video invitation")
+                accept_message = message()
+                accept_message.username = username
+                accept_message.message = "accept"
+                udt_send_command(accept_message, video_socket)
 
-        def refuse_invite():
-            invite_window.destroy()
-            logging.warning("refused video invitation")
-            refuse_message = message()
-            refuse_message.username = username
-            refuse_message.message = "refuse"
-            udt_send_command(refuse_message, video_socket)
+            def refuse_invite():
+                invite_window.destroy()
+                logging.warning("refused video invitation")
+                refuse_message = message()
+                refuse_message.username = username
+                refuse_message.message = "refuse"
+                udt_send_command(refuse_message, video_socket)
 
-        button_refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
-        button_refuse.place(x=60, y=60, width=60, height=25)
-        button_accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
-        button_accept.place(x=180, y=60, width=60, height=25)
+            button_refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
+            button_refuse.place(x=60, y=60, width=60, height=25)
+            button_accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
+            button_accept.place(x=180, y=60, width=60, height=25)
+        elif header.message == "videoAvailable":
+            logging.warning("video sharing approved")
+            logging.warning("sharing video...")
+
+            time.sleep(5)
+
+            logging.warning("video share finished...")
+
+            finish_command = message()
+            finish_command.message = "videofinish"
+            finish_command.username = username
+            udt_send_command(finish_command, video_socket)
+        elif header.message == "videoNotAvailable":
+            logging.warning("%s is sharing video, not approved" % header.username)
+            tkinter.messagebox.showerror('Rejected', message="Video share rejected, %s is sharing video" % header.username)
 
 
 r_chat = threading.Thread(target=recv_text)

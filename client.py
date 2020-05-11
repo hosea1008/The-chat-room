@@ -1,4 +1,5 @@
 import json  # json.dumps(some)打包   json.loads(some)解包
+from PIL import Image, ImageTk
 import logging
 import pickle
 import uuid
@@ -562,11 +563,14 @@ def recv_video():
                         break
                     elif data_header.message == "data":
                         data_length = data_header.messageLength
-                        data = video_udt_socket.recv(data_length, 0)
+                        try:
+                            data = video_udt_socket.recv(data_length)
 
-                        frame = pickle.loads(data)
-                        logging.warning("recv data of length %d" % len(frame))
-                        # cv2.imshow(header.username, frame)
+                            frame = pickle.loads(data)
+                            cv2.imshow("Video from %s" % header.username, frame)
+                            cv2.waitKey(40)
+                        except Exception as e:
+                            continue
 
             def refuse_invite():
                 invite_window.destroy()
@@ -586,31 +590,29 @@ def recv_video():
             logging.warning("sharing video...")
             button_sendvideo['state'] = tkinter.DISABLED
 
-            # cap = cv2.VideoCapture(0)
-            # while True:
-            for i in range(15):
-                # ret, frame = cap.read()
-                # cv2.imshow("You", frame)
+            cap = cv2.VideoCapture("fake_camera.mp4")
 
-                frame = "%d: wake up, neo...\n" % i
-                data = pickle.dumps(frame * 1024)
+            while True:
+                ret, frame = cap.read()
+
+                frame = cv2.resize(frame, (160, 120))
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                cv2.imshow("You", frame)
+
+                if cv2.waitKey(40) == 27:
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    break
+
+                data = pickle.dumps(frame)
 
                 data_header = message()
                 data_header.message = "data"
                 data_header.messageLength = len(data)
                 udt_send_command(data_header, video_udt_socket)
-                video_udt_socket.send(data, 0)
+                video_udt_socket.send(data)
 
-                time.sleep(1)
-                # if cv2.waitKey(10) == 27:
-                #     finish_command = message()
-                #     finish_command.message = "videofinish"
-                #     finish_command.username = username
-                #     tcp_send_command(finish_command, video_tcp_socket)
-                #     udt_send_command(finish_command, video_udt_socket)
-                #
-                #     cv2.destroyAllWindows()
-                #     break
             finish_command = message()
             finish_command.message = "videofinish"
             finish_command.username = username

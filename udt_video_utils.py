@@ -10,7 +10,7 @@ def register_video_client(server_addr, tcp_port, udt_port, username, client_uuid
     tcp_socket.connect((server_addr, tcp_port))
     logging.warning("TCP socket connected to %s:%s" % (server_addr, tcp_port))
 
-    udt_socket = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    udt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     udt_socket.connect((server_addr, udt_port))
     logging.warning("UDT socket connected to %s:%s" % (server_addr, udt_port))
 
@@ -39,8 +39,8 @@ def tcp_send_command(command, conn):
 
 
 def udt_recv_command(conn):
-    header_length = int.from_bytes(conn.recv(4, 0), 'big')
-    header_message_string = conn.recv(header_length, 0)
+    header_length = int.from_bytes(conn.recv(4), 'big')
+    header_message_string = conn.recv(header_length)
     command = message()
     command.ParseFromString(header_message_string)
     return command
@@ -48,5 +48,5 @@ def udt_recv_command(conn):
 
 def udt_send_command(command, conn):
     command_proto = command.SerializeToString()
-    conn.send(len(command_proto).to_bytes(4, 'big'), 0)
-    conn.send(command_proto, 0)
+    conn.send(len(command_proto).to_bytes(4, 'big'))
+    conn.send(command_proto)

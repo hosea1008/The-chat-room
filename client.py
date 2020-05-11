@@ -1,5 +1,6 @@
 import json  # json.dumps(some)打包   json.loads(some)解包
 import logging
+import pickle
 import uuid
 import os
 import select
@@ -13,6 +14,7 @@ import tkinter.messagebox
 from tkinter import filedialog
 from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的包
 
+import cv2
 import udt
 
 from message.message_pb2 import message
@@ -532,12 +534,15 @@ def recv_video():
     logging.warning("video command receiver started..")
     while True:
         header = tcp_recv_command(video_tcp_socket)
+        if header.ByteSize() == 0:
+            continue
         logging.warning("received message %s from server" % header.message)
         if header.message == "invitation":
+            button_sendvideo['state'] = tkinter.DISABLED
             invite_window = tkinter.Toplevel()
             invite_window.geometry('300x100')
             invite_window.title("Invitation")
-            label1 = tkinter.Label(invite_window, text="%s invites you to video chat" % header.username)
+            label1 = tkinter.Label(invite_window, text="%s invites you to join video chat" % header.username)
             label1.pack()
 
             def accept_invite():
@@ -549,15 +554,19 @@ def recv_video():
                 tcp_send_command(accept_message, video_tcp_socket)
 
                 while True:
-                    header = udt_recv_command(video_udt_socket)
-                    if header.message == "videofinish":
-                        logging.warning("video share from %s finished" % header.username)
+                    data_header = udt_recv_command(video_udt_socket)
+                    if data_header.message == "videofinish":
+                        logging.warning("video share from %s finished" % data_header.username)
+                        cv2.destroyAllWindows()
+                        button_sendvideo['state'] = tkinter.NORMAL
                         break
-                    elif header.message == "data":
-                        data_length = header.messageLength
+                    elif data_header.message == "data":
+                        data_length = data_header.messageLength
                         data = video_udt_socket.recv(data_length, 0)
 
-                        logging.warning("recvd data: %s" % data)
+                        frame = pickle.loads(data)
+                        logging.warning("recv data of length %d" % len(frame))
+                        # cv2.imshow(header.username, frame)
 
             def refuse_invite():
                 invite_window.destroy()
@@ -566,36 +575,55 @@ def recv_video():
                 refuse_message.username = username
                 refuse_message.message = "refuse"
                 tcp_send_command(refuse_message, video_tcp_socket)
+                button_sendvideo['state'] = tkinter.NORMAL
 
-            button_refuse = tkinter.Button(invite_window, text="Refuse", command=refuse_invite)
+            button_refuse = tkinter.Button(invite_window, text="REFUSE", command=refuse_invite)
             button_refuse.place(x=60, y=60, width=60, height=25)
-            button_accept = tkinter.Button(invite_window, text="Accept", command=accept_invite)
+            button_accept = tkinter.Button(invite_window, text="ACCEPT", command=accept_invite)
             button_accept.place(x=180, y=60, width=60, height=25)
         elif header.message == "videoAvailable":
             logging.warning("video sharing approved")
             logging.warning("sharing video...")
+            button_sendvideo['state'] = tkinter.DISABLED
 
-            fake_data = b"weke up neo...\n"
-            for i in range(200):
-                header = message()
-                # header.username = username
-                header.message = "data"
-                header.messageLength = len(fake_data)
-                udt_send_command(header, video_udt_socket)
-                video_udt_socket.send(fake_data, 0)
-                time.sleep(0.1)
+            # cap = cv2.VideoCapture(0)
+            # while True:
+            for i in range(15):
+                # ret, frame = cap.read()
+                # cv2.imshow("You", frame)
 
-            logging.warning("video share finished...")
+                frame = "%d: wake up, neo...\n" % i
+                data = pickle.dumps(frame * 1024)
 
+                data_header = message()
+                data_header.message = "data"
+                data_header.messageLength = len(data)
+                udt_send_command(data_header, video_udt_socket)
+                video_udt_socket.send(data, 0)
+
+                time.sleep(1)
+                # if cv2.waitKey(10) == 27:
+                #     finish_command = message()
+                #     finish_command.message = "videofinish"
+                #     finish_command.username = username
+                #     tcp_send_command(finish_command, video_tcp_socket)
+                #     udt_send_command(finish_command, video_udt_socket)
+                #
+                #     cv2.destroyAllWindows()
+                #     break
             finish_command = message()
             finish_command.message = "videofinish"
             finish_command.username = username
             tcp_send_command(finish_command, video_tcp_socket)
             udt_send_command(finish_command, video_udt_socket)
 
+            logging.warning("video share finished...")
+            button_sendvideo['state'] = tkinter.NORMAL
+
         elif header.message == "videoNotAvailable":
             logging.warning("%s is sharing video, not approved" % header.username)
-            tkinter.messagebox.showerror('Rejected', message="Video share rejected, %s is sharing video" % header.username)
+            tkinter.messagebox.showerror('Rejected',
+                                         message="Video share rejected, %s is sharing video" % header.username)
 
 
 r_chat = threading.Thread(target=recv_text)

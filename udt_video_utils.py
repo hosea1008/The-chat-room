@@ -40,7 +40,7 @@ def tcp_send_command(command, conn):
 
 def udt_recv_command(conn):
     header_length = int.from_bytes(conn.recv(4, 0), 'big')
-    header_message_string = conn.recv(header_length)
+    header_message_string = conn.recv(header_length, 0)
     command = message()
     command.ParseFromString(header_message_string)
     return command

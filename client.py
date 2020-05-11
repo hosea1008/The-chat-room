@@ -548,6 +548,17 @@ def recv_video():
                 accept_message.message = "accept"
                 tcp_send_command(accept_message, video_tcp_socket)
 
+                while True:
+                    header = udt_recv_command(video_udt_socket)
+                    if header.message == "videofinish":
+                        logging.warning("video share from %s finished" % header.username)
+                        break
+                    elif header.message == "data":
+                        data_length = header.messageLength
+                        data = video_udt_socket.recv(data_length, 0)
+
+                        logging.warning("recvd data: %s" % data)
+
             def refuse_invite():
                 invite_window.destroy()
                 logging.warning("refused video invitation")
@@ -564,7 +575,15 @@ def recv_video():
             logging.warning("video sharing approved")
             logging.warning("sharing video...")
 
-            time.sleep(5)
+            fake_data = b"weke up neo...\n"
+            for i in range(200):
+                header = message()
+                # header.username = username
+                header.message = "data"
+                header.messageLength = len(fake_data)
+                udt_send_command(header, video_udt_socket)
+                video_udt_socket.send(fake_data, 0)
+                time.sleep(0.1)
 
             logging.warning("video share finished...")
 
@@ -572,6 +591,8 @@ def recv_video():
             finish_command.message = "videofinish"
             finish_command.username = username
             tcp_send_command(finish_command, video_tcp_socket)
+            udt_send_command(finish_command, video_udt_socket)
+
         elif header.message == "videoNotAvailable":
             logging.warning("%s is sharing video, not approved" % header.username)
             tkinter.messagebox.showerror('Rejected', message="Video share rejected, %s is sharing video" % header.username)

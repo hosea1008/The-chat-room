@@ -92,10 +92,9 @@ class VideoFeeder():
 
     def create_window(self):
         self.video_window = tkinter.Toplevel()
-        self.video_window.bind('<Escape>', self.stop)
         self.video_window.protocol("WM_DELETE_WINDOW", self.stop)
         self.video_window.title("You")
-        self.video_window['height'] = self.frame_height + 100
+        self.video_window['height'] = self.frame_height + 30
         self.video_window['width'] = self.frame_width
         self.video_window.resizable(0, 0)
 
@@ -103,14 +102,14 @@ class VideoFeeder():
         self.video_label.pack()
 
         button_finish = tkinter.Button(self.video_window, text="FINISH", command=self.stop)
-        button_finish.place(x=0, y=self.frame_height + 10, width=self.frame_width, height=80)
+        button_finish.place(x=0, y=self.frame_height + 15, width=self.frame_width, height=25)
         button_finish.pack()
 
     def show_frame(self):
         if self.is_feeding:
             _, frame = self.cap.read()
             frame = cv2.resize(frame, (self.frame_width, self.frame_height))
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             data = pickle.dumps(frame)
             data_header = message()

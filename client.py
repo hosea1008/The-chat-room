@@ -451,10 +451,11 @@ video_tcp_socket, video_udt_socket = register_video_client("127.0.0.1", PORT + 2
 
 
 def send_video():
-    invitation = message()
-    invitation.message = "invitation"
-    invitation.username = username
-    tcp_send_command(invitation, video_tcp_socket)
+    if tkinter.messagebox.askokcancel("Share video", "Do you want to start a video sharing?"):
+        invitation = message()
+        invitation.message = "invitation"
+        invitation.username = username
+        tcp_send_command(invitation, video_tcp_socket)
 
 
 button_sendvideo = tkinter.Button(root, text='Video', command=send_video)
@@ -633,8 +634,9 @@ def recv_video():
 
         elif header.message == "videoNotAvailable":
             logging.warning("%s is sharing video, not approved" % header.username)
+            sharing_user = "%s is " % header.username if header.username != username else "you are "
             tkinter.messagebox.showerror('Rejected',
-                                         message="Video share rejected, %s is sharing video" % header.username)
+                                         message="Video share rejected, %ssharing video" % sharing_user)
 
 
 r_chat = threading.Thread(target=recv_text)

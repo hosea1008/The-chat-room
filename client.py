@@ -578,7 +578,7 @@ def recv_video():
 
                             data = b''.join(data_list)
                             if data_length != len(data):
-                                logging.warning("invalid data received, expecte %d bytes, got %s bytes" % (data_length, len(data)))
+                                logging.warning("invalid frame received, expecte %d bytes, got %s bytes" % (data_length, len(data)))
                                 continue
 
                             frame = pickle.loads(data)

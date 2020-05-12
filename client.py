@@ -116,7 +116,8 @@ def on_closing():
     if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
         EXIT = True
         root.destroy()
-        sys.exit()
+        # sys.exit()
+        exit()
 
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
@@ -591,35 +592,43 @@ def recv_video():
             button_sendvideo['state'] = tkinter.DISABLED
 
             cap = cv2.VideoCapture("fake_camera.mp4")
+            #
+            # while True:
+            #     ret, frame = cap.read()
+            #
+            #     frame = cv2.resize(frame, (160, 120))
+            #     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            #
+            #     cv2.imshow("You", frame)
+            #
+            #     if cv2.waitKey(40) == 27:
+            #         cap.release()
+            #         cv2.destroyAllWindows()
+            #         break
+            #
+            #     data = pickle.dumps(frame)
+            #
+            #     data_header = message()
+            #     data_header.message = "data"
+            #     data_header.messageLength = len(data)
+            #     udt_send_command(data_header, video_udt_socket)
+            #     video_udt_socket.send(data)
 
-            while True:
-                ret, frame = cap.read()
+            # finish_command = message()
+            # finish_command.message = "videofinish"
+            # finish_command.username = username
+            # tcp_send_command(finish_command, video_tcp_socket)
+            # udt_send_command(finish_command, video_udt_socket)
 
-                frame = cv2.resize(frame, (160, 120))
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            video_feeder = VideoFeeder(cap,
+                                       video_tcp_socket,
+                                       video_udt_socket,
+                                       username,
+                                       (160, 120),
+                                       25)
 
-                cv2.imshow("You", frame)
+            video_feeder.start()
 
-                if cv2.waitKey(40) == 27:
-                    cap.release()
-                    cv2.destroyAllWindows()
-                    break
-
-                data = pickle.dumps(frame)
-
-                data_header = message()
-                data_header.message = "data"
-                data_header.messageLength = len(data)
-                udt_send_command(data_header, video_udt_socket)
-                video_udt_socket.send(data)
-
-            finish_command = message()
-            finish_command.message = "videofinish"
-            finish_command.username = username
-            tcp_send_command(finish_command, video_tcp_socket)
-            udt_send_command(finish_command, video_udt_socket)
-
-            logging.warning("video share finished...")
             button_sendvideo['state'] = tkinter.NORMAL
 
         elif header.message == "videoNotAvailable":

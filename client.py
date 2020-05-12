@@ -565,8 +565,21 @@ def recv_video():
                         break
                     elif data_header.message == "data":
                         data_length = data_header.messageLength
+                        data_meta = data_header.meta
+                        package_size = data_meta.packageSize
+                        package_count = data_meta.packageCount
+                        tail_size = data_meta.tailSize
+
                         try:
-                            data = video_udt_socket.recv(data_length)
+                            data_list = []
+                            for i in range(package_count - 1):
+                                data_list.append(video_udt_socket.recv(package_size))
+                            data_list.append(video_udt_socket.recv(tail_size))
+
+                            data = b''.join(data_list)
+                            if data_length != len(data):
+                                logging.warning("invalid data received, expecte %d bytes, got %s bytes" % (data_length, len(data)))
+                                continue
 
                             frame = pickle.loads(data)
                             cv2.imshow("Video from %s" % header.username, frame)

@@ -1,10 +1,17 @@
 syntax = "proto3";
 package message;
 
+message metadata{
+  uint32 packageSize = 1;
+  uint32 packageCount = 2;
+  uint32 tailSize = 3;
+}
+
 message message {
   uint32 messageLength = 1;
   string message = 2;
   string username = 3;
   string address = 4;
   string uuid = 5;
+  metadata meta = 6;
 }

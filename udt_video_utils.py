@@ -5,10 +5,14 @@ import tkinter
 
 import cv2
 
-from message.message_pb2 import message
+from message.message_pb2 import message, metadata
 
 import udt
 import logging
+
+
+def list_split(data, length):
+    return [data[m:m + length] for m in range(0, len(data), length)]
 
 
 def register_video_client(server_addr, tcp_port, udt_port, username, client_uuid):
@@ -112,11 +116,23 @@ class VideoFeeder():
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             data = pickle.dumps(frame)
+            data_list = list_split(data, 4096)
+
             data_header = message()
             data_header.message = "data"
             data_header.messageLength = len(data)
+
+            data_meta = metadata()
+            data_meta.packageSize = 4096
+            data_meta.packageCount = len(data_list)
+            data_meta.tailSize = len(data_list[-1])
+
+            data_header.meta = data_meta
+
             udt_send_command(data_header, self.data_tunnel)
-            self.data_tunnel.send(data)
+
+            for data_package in data_list:
+                self.data_tunnel.send(data_package)
 
             img = ImageTk.PhotoImage(image=Image.fromarray(frame))
             self.video_label.imgtk = img

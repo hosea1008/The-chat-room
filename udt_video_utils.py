@@ -113,7 +113,7 @@ class VideoFeeder:
         if self.is_feeding:
             _, frame = self.cap.read()
             frame = cv2.resize(frame, (self.frame_width, self.frame_height))
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             data = pickle.dumps(frame)
             data_list = list_split(data, 2048)
@@ -133,7 +133,7 @@ class VideoFeeder:
             for data_package in data_list:
                 self.data_tunnel.send(data_package)
 
-            img = ImageTk.PhotoImage(image=Image.fromarray(frame))
+            img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
             self.video_label.imgtk = img
             self.video_label.config(image=img)
             self.video_label.after(int(1000 / self.fps), self.show_frame)
@@ -151,7 +151,6 @@ class VideoReceiver:
         self.command_tunnel = command_tunnel
         self.data_tunnel = data_tunnel
         self.username = username,
-        self.remote_username = ""
 
     def recv_frame(self):
         is_finished = False
@@ -159,10 +158,9 @@ class VideoReceiver:
         error = None
 
         data_header = udt_recv_command(self.data_tunnel)
-        self.remote_username = data_header.username
 
         if data_header.message == "videofinish":
-            logging.warning("video share from %s finished" % data_header.username)
+            logging.warning("video share finished")
             is_finished = True
         elif data_header.message == "data":
             data_length = data_header.messageLength
@@ -186,4 +184,4 @@ class VideoReceiver:
             except Exception as e:
                 error = str(e)
 
-        return error, is_finished, self.remote_username, frame
+        return error, is_finished, frame

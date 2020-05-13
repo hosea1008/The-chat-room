@@ -539,7 +539,7 @@ def recv_video():
         header = tcp_recv_command(video_tcp_socket)
         if header.ByteSize() == 0:
             continue
-        logging.warning("received message %s from server" % header.message)
+        logging.warning("command tunnel received message %s from server" % header.message)
         if header.message == "invitation":
             button_sendvideo['state'] = tkinter.DISABLED
             invite_window = tkinter.Toplevel()
@@ -561,14 +561,14 @@ def recv_video():
                                                username)
 
                 while True:
-                    error, is_finished, remote_username, frame = video_receiver.recv_frame()
+                    error, is_finished, frame = video_receiver.recv_frame()
 
                     if error is not None:
                         logging.warning("error: %s" % error)
                         continue
 
                     if is_finished:
-                        logging.warning("video share from %s finished" % remote_username)
+                        logging.warning("video share finished")
                         cv2.destroyAllWindows()
                         button_sendvideo['state'] = tkinter.NORMAL
                         break

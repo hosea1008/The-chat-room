@@ -20,7 +20,7 @@ def register_video_client(server_addr, tcp_port, udt_port, username, client_uuid
     tcp_socket.connect((server_addr, tcp_port))
     logging.warning("TCP socket connected to %s:%s" % (server_addr, tcp_port))
 
-    udt_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    udt_socket = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     udt_socket.connect((server_addr, udt_port))
     logging.warning("UDT socket connected to %s:%s" % (server_addr, udt_port))
 
@@ -35,7 +35,7 @@ def register_video_client(server_addr, tcp_port, udt_port, username, client_uuid
 
 
 def tcp_recv_command(conn):
-    header_length = int.from_bytes(conn.recv(4), 'big')
+    header_length = int.from_bytes(conn.recv(4), 'little')
     header_message_string = conn.recv(header_length)
     command = message()
     command.ParseFromString(header_message_string)
@@ -44,13 +44,13 @@ def tcp_recv_command(conn):
 
 def tcp_send_command(command, conn):
     command_proto = command.SerializeToString()
-    conn.send(len(command_proto).to_bytes(4, 'big'))
+    conn.send(len(command_proto).to_bytes(4, 'little'))
     conn.send(command_proto)
 
 
 def udt_recv_command(conn):
-    header_length = int.from_bytes(conn.recv(4), 'big')
-    header_message_string = conn.recv(header_length)
+    header_length = int.from_bytes(conn.recv(4, 0), 'little')
+    header_message_string = conn.recv(header_length, 0)
     command = message()
     command.ParseFromString(header_message_string)
     return command
@@ -58,8 +58,8 @@ def udt_recv_command(conn):
 
 def udt_send_command(command, conn):
     command_proto = command.SerializeToString()
-    conn.send(len(command_proto).to_bytes(4, 'big'))
-    conn.send(command_proto)
+    conn.send(len(command_proto).to_bytes(4, 'little'), 0)
+    conn.send(command_proto, 0)
 
 
 class VideoFeeder:
@@ -116,7 +116,7 @@ class VideoFeeder:
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             data = pickle.dumps(frame)
-            data_list = list_split(data, 2048)
+            data_list = list_split(data, 1024)
 
             data_header = message()
             data_header.username = self.username
@@ -124,14 +124,14 @@ class VideoFeeder:
             data_header.messageLength = len(data)
 
             data_meta = data_header.meta.add()
-            data_meta.packageSize = 2048
+            data_meta.packageSize = 1024
             data_meta.packageCount = len(data_list)
             data_meta.tailSize = len(data_list[-1])
 
             udt_send_command(data_header, self.data_tunnel)
 
             for data_package in data_list:
-                self.data_tunnel.send(data_package)
+                self.data_tunnel.send(data_package, 0)
 
             img = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
             self.video_label.imgtk = img
@@ -173,8 +173,8 @@ class VideoReceiver:
             try:
                 data_list = []
                 for i in range(package_count - 1):
-                    data_list.append(self.data_tunnel.recv(package_size))
-                data_list.append(self.data_tunnel.recv(tail_size))
+                    data_list.append(self.data_tunnel.recv(package_size, 0))
+                data_list.append(self.data_tunnel.recv(tail_size, 0))
 
                 data = b''.join(data_list)
                 if data_length != len(data):

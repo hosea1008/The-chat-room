@@ -556,36 +556,25 @@ def recv_video():
                 accept_message.message = "accept"
                 tcp_send_command(accept_message, video_tcp_socket)
 
+                video_receiver = VideoReceiver(video_tcp_socket,
+                                               video_udt_socket,
+                                               username)
+
                 while True:
-                    data_header = udt_recv_command(video_udt_socket)
-                    if data_header.message == "videofinish":
-                        logging.warning("video share from %s finished" % data_header.username)
+                    error, is_finished, remote_username, frame = video_receiver.recv_frame()
+
+                    if error is not None:
+                        logging.warning("error: %s" % error)
+                        continue
+
+                    if is_finished:
+                        logging.warning("video share from %s finished" % remote_username)
                         cv2.destroyAllWindows()
                         button_sendvideo['state'] = tkinter.NORMAL
                         break
-                    elif data_header.message == "data":
-                        data_length = data_header.messageLength
-                        data_meta = data_header.meta
-                        package_size = data_meta.packageSize
-                        package_count = data_meta.packageCount
-                        tail_size = data_meta.tailSize
-
-                        try:
-                            data_list = []
-                            for i in range(package_count - 1):
-                                data_list.append(video_udt_socket.recv(package_size))
-                            data_list.append(video_udt_socket.recv(tail_size))
-
-                            data = b''.join(data_list)
-                            if data_length != len(data):
-                                logging.warning("invalid frame received, expecte %d bytes, got %s bytes" % (data_length, len(data)))
-                                continue
-
-                            frame = pickle.loads(data)
-                            cv2.imshow("Video from %s" % header.username, frame)
-                            cv2.waitKey(40)
-                        except Exception as e:
-                            continue
+                    else:
+                        cv2.imshow("Video from %s" % header.username, frame)
+                        cv2.waitKey(40)
 
             def refuse_invite():
                 invite_window.destroy()
@@ -606,33 +595,6 @@ def recv_video():
             button_sendvideo['state'] = tkinter.DISABLED
 
             cap = cv2.VideoCapture("fake_camera.mp4")
-            #
-            # while True:
-            #     ret, frame = cap.read()
-            #
-            #     frame = cv2.resize(frame, (160, 120))
-            #     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            #
-            #     cv2.imshow("You", frame)
-            #
-            #     if cv2.waitKey(40) == 27:
-            #         cap.release()
-            #         cv2.destroyAllWindows()
-            #         break
-            #
-            #     data = pickle.dumps(frame)
-            #
-            #     data_header = message()
-            #     data_header.message = "data"
-            #     data_header.messageLength = len(data)
-            #     udt_send_command(data_header, video_udt_socket)
-            #     video_udt_socket.send(data)
-
-            # finish_command = message()
-            # finish_command.message = "videofinish"
-            # finish_command.username = username
-            # tcp_send_command(finish_command, video_tcp_socket)
-            # udt_send_command(finish_command, video_udt_socket)
 
             video_feeder = VideoFeeder(cap,
                                        video_tcp_socket,

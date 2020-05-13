@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='message',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\rmessage.proto\x12\x07message\"G\n\x08metadata\x12\x13\n\x0bpackageSize\x18\x01 \x01(\r\x12\x14\n\x0cpackageCount\x18\x02 \x01(\r\x12\x10\n\x08tailSize\x18\x03 \x01(\r\"\x83\x01\n\x07message\x12\x15\n\rmessageLength\x18\x01 \x01(\r\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x10\n\x08username\x18\x03 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x0c\n\x04uuid\x18\x05 \x01(\t\x12\x1f\n\x04meta\x18\x06 \x01(\x0b\x32\x11.message.metadatab\x06proto3'
+  serialized_pb=b'\n\rmessage.proto\x12\x07message\"G\n\x08metadata\x12\x13\n\x0bpackageSize\x18\x01 \x01(\r\x12\x14\n\x0cpackageCount\x18\x02 \x01(\r\x12\x10\n\x08tailSize\x18\x03 \x01(\r\"\x83\x01\n\x07message\x12\x15\n\rmessageLength\x18\x01 \x01(\r\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x10\n\x08username\x18\x03 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x0c\n\x04uuid\x18\x05 \x01(\t\x12\x1f\n\x04meta\x18\x06 \x03(\x0b\x32\x11.message.metadatab\x06proto3'
 )
 
 
@@ -113,8 +113,8 @@ _MESSAGE = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='meta', full_name='message.message.meta', index=5,
-      number=6, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
+      number=6, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),

@@ -62,7 +62,7 @@ def udt_send_command(command, conn):
     conn.send(command_proto)
 
 
-class VideoFeeder():
+class VideoFeeder:
     def __init__(self, cap,
                  command_tunnel,
                  data_tunnel,
@@ -113,21 +113,20 @@ class VideoFeeder():
         if self.is_feeding:
             _, frame = self.cap.read()
             frame = cv2.resize(frame, (self.frame_width, self.frame_height))
-            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             data = pickle.dumps(frame)
-            data_list = list_split(data, 4096)
+            data_list = list_split(data, 2048)
 
             data_header = message()
+            data_header.username = self.username
             data_header.message = "data"
             data_header.messageLength = len(data)
 
-            data_meta = metadata()
-            data_meta.packageSize = 4096
+            data_meta = data_header.meta.add()
+            data_meta.packageSize = 2048
             data_meta.packageCount = len(data_list)
             data_meta.tailSize = len(data_list[-1])
-
-            data_header.meta = data_meta
 
             udt_send_command(data_header, self.data_tunnel)
 
@@ -143,3 +142,48 @@ class VideoFeeder():
         self.is_feeding = True
         self.create_window()
         self.show_frame()
+
+class VideoReceiver:
+    def __init__(self,
+                 command_tunnel,
+                 data_tunnel,
+                 username):
+        self.command_tunnel = command_tunnel
+        self.data_tunnel = data_tunnel
+        self.username = username,
+        self.remote_username = ""
+
+    def recv_frame(self):
+        is_finished = False
+        frame = None
+        error = None
+
+        data_header = udt_recv_command(self.data_tunnel)
+        self.remote_username = data_header.username
+
+        if data_header.message == "videofinish":
+            logging.warning("video share from %s finished" % data_header.username)
+            is_finished = True
+        elif data_header.message == "data":
+            data_length = data_header.messageLength
+            data_meta = data_header.meta[0]
+            package_size = data_meta.packageSize
+            package_count = data_meta.packageCount
+            tail_size = data_meta.tailSize
+
+            try:
+                data_list = []
+                for i in range(package_count - 1):
+                    data_list.append(self.data_tunnel.recv(package_size))
+                data_list.append(self.data_tunnel.recv(tail_size))
+
+                data = b''.join(data_list)
+                if data_length != len(data):
+                    logging.warning("invalid frame received, expecte %d bytes, got %s bytes" % (data_length, len(data)))
+                    error = "invalid frame"
+
+                frame = pickle.loads(data)
+            except Exception as e:
+                error = str(e)
+
+        return error, is_finished, self.remote_username, frame

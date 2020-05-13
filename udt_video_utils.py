@@ -143,6 +143,7 @@ class VideoFeeder:
         self.create_window()
         self.show_frame()
 
+
 class VideoReceiver:
     def __init__(self,
                  command_tunnel,
@@ -183,5 +184,8 @@ class VideoReceiver:
                 frame = pickle.loads(data)
             except Exception as e:
                 error = str(e)
+
+            if frame is None:
+                error = "empty frame"
 
         return error, is_finished, frame

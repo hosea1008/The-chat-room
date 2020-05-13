@@ -565,6 +565,8 @@ def recv_video():
 
                     if error is not None:
                         logging.warning("error: %s" % error)
+                        cv2.destroyAllWindows()
+                        button_sendvideo['state'] = tkinter.NORMAL
                         continue
 
                     if is_finished:
@@ -573,7 +575,7 @@ def recv_video():
                         button_sendvideo['state'] = tkinter.NORMAL
                         break
                     else:
-                        cv2.imshow("Video from %s" % header.username, frame)
+                        cv2.imshow("Video: %s --> %s" % (header.username, username), frame)
                         cv2.waitKey(40)
 
             def refuse_invite():
@@ -600,7 +602,7 @@ def recv_video():
                                        video_tcp_socket,
                                        video_udt_socket,
                                        username,
-                                       (160, 120),
+                                       (640, 480),
                                        25)
 
             video_feeder.start()

@@ -1,81 +1,73 @@
-import json  # json.dumps(some)打包   json.loads(some)解包
-from PIL import Image, ImageTk
-import logging
-import pickle
-import uuid
-import os
-import select
-import socket
-import struct
+import json
 import sys
+import os
+import struct
 import threading
 import time
-import tkinter
 import tkinter.messagebox
+import uuid
 from tkinter import filedialog
 from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的包
 
-import cv2
-import udt
-
-from message.message_pb2 import message
 from udt_video_utils import *
 
-IP = ''
+# IP = ''
 PORT = 50007
-username = ''
+# username = ''
 listbox1 = ''  # 用于显示在线用户的列表框
 ii = 0  # 用于判断是开还是关闭列表框
 users = []  # 在线用户列表
 chat = '------Group chat-------'  # 聊天对象, 默认为群聊
 
-# 登陆窗口
-login_window = tkinter.Tk()
-login_window.tk.call('tk', 'scaling', 6.0)
-login_window.title('Log in')
-login_window['height'] = 110
-login_window['width'] = 270
-login_window.resizable(0, 0)  # 限制窗口大小
+# # 登陆窗口
+# login_window = tkinter.Tk()
+# login_window.tk.call('tk', 'scaling', 6.0)
+# login_window.title('Log in')
+# login_window['height'] = 110
+# login_window['width'] = 270
+# login_window.resizable(0, 0)  # 限制窗口大小
+#
+# IP1 = tkinter.StringVar()
+# IP1.set('127.0.0.1:%d' % PORT)  # 默认显示的ip和端口
+# User = tkinter.StringVar()
+# User.set('')
 
-IP1 = tkinter.StringVar()
-IP1.set('127.0.0.1:%d' % PORT)  # 默认显示的ip和端口
-User = tkinter.StringVar()
-User.set('')
+# # 服务器标签
+# labelIP = tkinter.Label(login_window, text='Server address')
+# labelIP.place(x=20, y=10, width=100, height=20)
+#
+# entryIP = tkinter.Entry(login_window, width=80, textvariable=IP1)
+# entryIP.place(x=120, y=10, width=130, height=20)
+#
+# # 用户名标签
+# labelUser = tkinter.Label(login_window, text='Username')
+# labelUser.place(x=30, y=40, width=80, height=20)
+#
+# entryUser = tkinter.Entry(login_window, width=80, textvariable=User)
+# entryUser.place(x=120, y=40, width=130, height=20)
+#
+#
+# # 登录按钮
+# def login(*args):
+#     global IP, PORT, username
+#     IP, PORT = entryIP.get().split(':')  # 获取IP和端口号
+#     PORT = int(PORT)  # 端口号需要为int类型
+#     username = entryUser.get().strip()
+#     if not username:
+#         tkinter.messagebox.showerror('Name type error', message='Username Empty!')
+#     elif len(username) >= 20:
+#         tkinter.messagebox.showerror("Username too long", message="Username can't be longer than 20")
+#     else:
+#         login_window.destroy()  # 关闭窗口
+#
+#
+# login_window.bind('<Return>', login)  # 回车绑定登录功能
+# but = tkinter.Button(login_window, text='Log in', command=login)
+# but.place(x=100, y=70, width=70, height=30)
+#
+# login_window.mainloop()
 
-# 服务器标签
-labelIP = tkinter.Label(login_window, text='Server address')
-labelIP.place(x=20, y=10, width=100, height=20)
-
-entryIP = tkinter.Entry(login_window, width=80, textvariable=IP1)
-entryIP.place(x=120, y=10, width=130, height=20)
-
-# 用户名标签
-labelUser = tkinter.Label(login_window, text='Username')
-labelUser.place(x=30, y=40, width=80, height=20)
-
-entryUser = tkinter.Entry(login_window, width=80, textvariable=User)
-entryUser.place(x=120, y=40, width=130, height=20)
-
-
-# 登录按钮
-def login(*args):
-    global IP, PORT, username
-    IP, PORT = entryIP.get().split(':')  # 获取IP和端口号
-    PORT = int(PORT)  # 端口号需要为int类型
-    username = entryUser.get().strip()
-    if not username:
-        tkinter.messagebox.showerror('Name type error', message='Username Empty!')
-    elif len(username) >= 20:
-        tkinter.messagebox.showerror("Username too long", message="Username can't be longer than 20")
-    else:
-        login_window.destroy()  # 关闭窗口
-
-
-login_window.bind('<Return>', login)  # 回车绑定登录功能
-but = tkinter.Button(login_window, text='Log in', command=login)
-but.place(x=100, y=70, width=70, height=30)
-
-login_window.mainloop()
+IP, username = sys.argv[1:]
 
 chat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

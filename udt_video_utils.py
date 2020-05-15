@@ -157,8 +157,10 @@ class VideoReceiver:
         is_finished = False
         frame = None
         error = None
+        remote_username = ""
 
         data_header = udt_recv_command(self.data_tunnel)
+        remote_username = data_header.username
 
         if data_header.message == "videofinish":
             logging.warning("video share finished")
@@ -188,4 +190,4 @@ class VideoReceiver:
             if frame is None:
                 error = "empty frame"
 
-        return error, is_finished, frame
+        return error, remote_username, is_finished, frame

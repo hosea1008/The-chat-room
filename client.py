@@ -62,9 +62,11 @@ def login(*args):
     global IP, PORT, username
     IP, PORT = entryIP.get().split(':')  # 获取IP和端口号
     PORT = int(PORT)  # 端口号需要为int类型
-    username = entryUser.get()
+    username = entryUser.get().strip()
     if not username:
         tkinter.messagebox.showerror('Name type error', message='Username Empty!')
+    elif len(username) >= 20:
+        tkinter.messagebox.showerror("Username too long", message="Username can't be longer than 20")
     else:
         login_window.destroy()  # 关闭窗口
 
@@ -561,7 +563,7 @@ def recv_video():
                                                username)
 
                 while True:
-                    error, is_finished, frame = video_receiver.recv_frame()
+                    error, remote_username, is_finished, frame = video_receiver.recv_frame()
 
                     if error is not None:
                         logging.warning("error: %s" % error)
@@ -575,7 +577,7 @@ def recv_video():
                         button_sendvideo['state'] = tkinter.NORMAL
                         break
                     else:
-                        cv2.imshow("Video: %s --> %s" % (header.username, username), frame)
+                        cv2.imshow("Video: %s --> %s" % (remote_username, username), frame)
                         cv2.waitKey(40)
 
             def refuse_invite():

@@ -92,7 +92,7 @@ class VideoFeeder:
         self.cap.release()
         self.video_window.destroy()
 
-        logging.warning("video share finished...")
+        logging.warning("VideoSource: video share finished...")
 
     def create_window(self):
         self.video_window = tkinter.Toplevel()
@@ -108,6 +108,7 @@ class VideoFeeder:
         button_finish = tkinter.Button(self.video_window, text="FINISH", command=self.stop)
         button_finish.place(x=0, y=self.frame_height + 15, width=self.frame_width, height=25)
         button_finish.pack()
+
 
     def show_frame(self):
         if self.is_feeding:
@@ -152,19 +153,22 @@ class VideoReceiver:
         self.command_tunnel = command_tunnel
         self.data_tunnel = data_tunnel
         self.username = username,
+        self.sharingHosts = set()
 
     def recv_frame(self):
-        is_finished = False
+        one_finish = False
         frame = None
         error = None
-        remote_username = ""
+        remote_username = None
 
         data_header = udt_recv_command(self.data_tunnel)
         remote_username = data_header.username
+        self.sharingHosts.add(remote_username)
 
         if data_header.message == "videofinish":
-            logging.warning("video share finished")
-            is_finished = True
+            logging.warning("video share from %s finished" % remote_username)
+            one_finish = True
+            self.sharingHosts.remove(remote_username)
         elif data_header.message == "data":
             data_length = data_header.messageLength
             data_meta = data_header.meta[0]
@@ -190,4 +194,4 @@ class VideoReceiver:
             if frame is None:
                 error = "empty frame"
 
-        return error, remote_username, is_finished, frame
+        return error, remote_username, one_finish, self.sharingHosts, frame

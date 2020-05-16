@@ -14,9 +14,9 @@ import sys
 # IP = socket.gethostbyname(socket.getfqdn(socket.gethostname()))
 IP = ''
 PORT = 50007
-que = queue.Queue()                             # 用于存放客户端发送的信息的队列
-users = []                                      # 用于存放在线用户的信息  [conn, user, addr]
-lock = threading.Lock()                         # 创建锁, 防止多个线程写入数据的顺序打乱
+que = queue.Queue()  # 用于存放客户端发送的信息的队列
+users = []  # 用于存放在线用户的信息  [conn, user, addr]
+lock = threading.Lock()  # 创建锁, 防止多个线程写入数据的顺序打乱
 
 
 # 将在线用户存入online列表并返回
@@ -44,7 +44,7 @@ class ChatServer(threading.Thread):
     # 用于接收所有客户端发送信息的函数
     def tcp_connect(self, conn, addr):
         # 连接后将用户信息添加到users列表
-        user = conn.recv(1024)                                    # 接收用户名
+        user = conn.recv(struct.unpack("I", conn.recv(struct.calcsize("I")))[0])  # 接收用户名
         user = user.decode()
 
         for i in range(len(users)):
@@ -55,18 +55,24 @@ class ChatServer(threading.Thread):
         if user == 'no':
             user = addr[0] + ':' + str(addr[1])
         users.append((conn, user, addr))
-        print(' New connection:', addr, ':', user, end='')         # 打印用户名
-        d = onlines()                                                   # 有新连接则刷新客户端的在线用户显示
+        print(' New connection:', addr, ':', user, end='')  # 打印用户名
+        d = onlines()  # 有新连接则刷新客户端的在线用户显示
         self.recv(d, addr)
         try:
             while True:
-                data = conn.recv(1024)
+                data = conn.recv(struct.unpack("I", conn.recv(struct.calcsize("I")))[0])  # 接收用户名
                 data = data.decode()
-                self.recv(data, addr)                         # 保存信息到队列
+                if data == "goodbye":
+                    lock.acquire()
+                    conn.send("goodbye".encode())
+                    self.delUsers(conn, addr)
+                    lock.release()
+                    break
+                self.recv(data, addr)  # 保存信息到队列
             conn.close()
         except:
             print(user + ' Connection lose')
-            self.delUsers(conn, addr)                             # 将断开用户移出users
+            self.delUsers(conn, addr)  # 将断开用户移出users
             conn.close()
 
     # 判断断开用户在users中是第几位并移出列表, 刷新客户端的在线用户显示
@@ -75,7 +81,7 @@ class ChatServer(threading.Thread):
         for i in users:
             if i[0] == conn:
                 users.pop(a)
-                print(' Remaining online users: ', end='')         # 打印剩余在线用户(conn)
+                print(' Remaining online users: ', end='')  # 打印剩余在线用户(conn)
                 d = onlines()
                 self.recv(d, addr)
                 print(d)
@@ -93,11 +99,12 @@ class ChatServer(threading.Thread):
     # 将队列que中的消息发送给所有连接到的用户
     def sendData(self):
         while True:
+            time.sleep(0.1)
             if not que.empty():
                 data = ''
                 reply_text = ''
-                message = que.get()                               # 取出队列第一个元素
-                if isinstance(message[1], str):                   # 如果data是str则返回Ture
+                message = que.get()  # 取出队列第一个元素
+                if isinstance(message[1], str):  # 如果data是str则返回Ture
                     for i in range(len(users)):
                         # user[i][1]是用户名, users[i][2]是addr, 将message[0]改为用户名
                         for j in range(len(users)):
@@ -105,14 +112,20 @@ class ChatServer(threading.Thread):
                                 # TODO Add Chinese support
                                 data = ' ' + users[j][1] + ': ' + message[1]
                                 break
+                        lock.acquire()
+                        users[i][0].send(struct.pack("I", len(data.encode())))
                         users[i][0].send(data.encode())
+                        lock.release()
                 # data = data.split(':;')[0]
                 if isinstance(message[1], list):  # 同上
                     # 如果是list则打包后直接发送  
                     data = json.dumps(message[1])
                     for i in range(len(users)):
                         try:
+                            lock.acquire()
+                            users[i][0].send(struct.pack("I", len(data.encode())))
                             users[i][0].send(data.encode())
+                            lock.release()
                         except:
                             pass
 
@@ -127,7 +140,7 @@ class ChatServer(threading.Thread):
             conn, addr = self.s.accept()
             t = threading.Thread(target=self.tcp_connect, args=(conn, addr))
             t.start()
-        self.s.close()
+
 
 ################################################################
 class FileServer(threading.Thread):
@@ -195,12 +208,6 @@ class FileServer(threading.Thread):
                 recvd_size = file_length
             file.write(rdata)
         file.close()
-        # with open(fileName, 'wb') as f:
-        #     while True:
-        #         data = conn.recv(1024)
-        #         if data == 'EOF'.encode():
-        #             break
-        #         f.write(data)
         logging.warning('file wrote to %s' % file_name)
 
     # 切换工作目录
@@ -258,11 +265,11 @@ class UDTFileServer(threading.Thread):
         self.s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         # self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.first = r'.%sudt_resources' % os.path.sep
-        os.chdir(self.first)                                     # 把first设为当前工作路径
+        os.chdir(self.first)  # 把first设为当前工作路径
 
     def tcp_connect(self, conn, addr):
         print(' Connected by: ', addr)
-        
+
         while True:
             header = conn.recv(struct.calcsize('3si'), 0)
             command, message_length = struct.unpack('3si', header)
@@ -284,7 +291,7 @@ class UDTFileServer(threading.Thread):
 
     # 发送文件函数
     def sendFile(self, message, conn):
-        name = message.strip()                               # 获取第二个参数(文件名)
+        name = message.strip()  # 获取第二个参数(文件名)
         fileName = r'.%s' % os.path.sep + name
         file_length = os.stat(fileName).st_size
         conn.send(struct.pack('l', file_length), 0)
@@ -320,7 +327,7 @@ class UDTFileServer(threading.Thread):
 
     # 切换工作目录
     def cd(self, message, conn):
-        path = os.getcwd().split(os.path.sep)                        # 当前工作目录
+        path = os.getcwd().split(os.path.sep)  # 当前工作目录
         for i in range(len(path)):
             if path[i] == 'udt_resources':
                 break
@@ -337,7 +344,8 @@ class UDTFileServer(threading.Thread):
 
     # 判断输入的命令并执行对应的函数
     def recv_func(self, command, message, conn):
-        logging.warning("receive command %s message %s" % (command, message))
+        if command != 'ls ':
+            logging.warning("receive command %s message %s" % (command, message))
         if command == 'get':
             return self.sendFile(message.decode(), conn)
         elif command == 'put':
@@ -356,6 +364,7 @@ class UDTFileServer(threading.Thread):
             logging.warning("connection accepted")
             t = threading.Thread(target=self.tcp_connect, args=(conn, addr))
             t.start()
+
 
 #############################################################################
 

@@ -18,6 +18,7 @@ listbox1 = ''  # 用于显示在线用户的列表框
 ii = 0  # 用于判断是开还是关闭列表框
 users = []  # 在线用户列表
 chat = '------Group chat-------'  # 聊天对象, 默认为群聊
+EXIT = False
 
 # # 登陆窗口
 # login_window = tkinter.Tk()
@@ -73,6 +74,7 @@ chat_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 chat_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 chat_socket.connect((IP, PORT))
 if username:
+    chat_socket.send(struct.pack("I", len(username.encode())))
     chat_socket.send(username.encode())  # 发送用户名
 else:
     chat_socket.send('no'.encode())  # 没有输入用户名则标记no
@@ -103,18 +105,6 @@ listbox.tag_config('pink', foreground='pink')
 listbox.tag_config('yellow', foreground='yellow')
 listbox.tag_config('cyan', foreground='cyan')
 listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
-
-
-def on_closing():
-    global EXIT
-    if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
-        EXIT = True
-        root.destroy()
-        # sys.exit()
-        exit()
-
-
-root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
@@ -430,6 +420,7 @@ def send_text(*args):
         return
     # TODO Add Chinese support
     mes = entry.get() + ':;' + username + ':;' + chat  # 添加聊天对象标记
+    chat_socket.send(struct.pack("I", len(mes.encode())))
     chat_socket.send(mes.encode())
     a.set('')  # 发送后清空文本框
 
@@ -478,10 +469,14 @@ listbox1.bind('<ButtonRelease-1>', private)
 
 # 用于时刻接收服务端发送的信息并打印
 def recv_text():
-    global users, EXIT
+    global users
     while True:
-        data = chat_socket.recv(1024)
+        data = chat_socket.recv(struct.unpack("I", chat_socket.recv(struct.calcsize("I")))[0])  # 接收用户名
         data = data.decode()
+        if data == "goodbye":
+            logging.warning("Chat client %s signed off" % username)
+            chat_socket.close()
+            break
         # 没有捕获到异常则表示接收到的是在线用户列表
         try:
             data = json.loads(data)
@@ -536,14 +531,16 @@ def recv_video():
         logging.warning("command tunnel received message %s from server" % header.message)
         if header.message == "invitation":
             button_sendvideo['state'] = tkinter.DISABLED
-            invite_window = tkinter.Toplevel()
-            invite_window.geometry('300x100')
-            invite_window.title("Invitation")
-            label1 = tkinter.Label(invite_window, text="%s invites you to join video chat" % header.username)
-            label1.pack()
+
+            def refuse_invite():
+                logging.warning("refused video invitation")
+                refuse_message = message()
+                refuse_message.username = username
+                refuse_message.message = "refuse"
+                tcp_send_command(refuse_message, video_tcp_socket)
+                button_sendvideo['state'] = tkinter.NORMAL
 
             def accept_invite():
-                invite_window.destroy()
                 logging.warning("accepted video invitation")
                 accept_message = message()
                 accept_message.username = username
@@ -555,7 +552,7 @@ def recv_video():
                                                username)
 
                 while True:
-                    error, remote_username, is_finished, frame = video_receiver.recv_frame()
+                    error, remote_username, one_finish, sharing_hosts, frame = video_receiver.recv_frame()
 
                     if error is not None:
                         logging.warning("error: %s" % error)
@@ -563,28 +560,25 @@ def recv_video():
                         button_sendvideo['state'] = tkinter.NORMAL
                         continue
 
-                    if is_finished:
-                        logging.warning("video share finished")
+                    if one_finish:
+                        logging.warning("video share from %s finished" % remote_username)
+                        cv2.destroyWindow("Video from %s" % remote_username)
+
+                    if len(sharing_hosts) == 0:
+                        logging.warning("no host is sharing videos")
                         cv2.destroyAllWindows()
                         button_sendvideo['state'] = tkinter.NORMAL
                         break
-                    else:
-                        cv2.imshow("Video: %s --> %s" % (remote_username, username), frame)
-                        cv2.waitKey(40)
 
-            def refuse_invite():
-                invite_window.destroy()
-                logging.warning("refused video invitation")
-                refuse_message = message()
-                refuse_message.username = username
-                refuse_message.message = "refuse"
-                tcp_send_command(refuse_message, video_tcp_socket)
-                button_sendvideo['state'] = tkinter.NORMAL
+                    if frame is not None:
+                        cv2.imshow("Video from %s" % remote_username, frame)
+                        cv2.waitKey(1)
 
-            button_refuse = tkinter.Button(invite_window, text="REFUSE", command=refuse_invite)
-            button_refuse.place(x=60, y=60, width=60, height=25)
-            button_accept = tkinter.Button(invite_window, text="ACCEPT", command=accept_invite)
-            button_accept.place(x=180, y=60, width=60, height=25)
+            if tkinter.messagebox.askokcancel("Invitation", "Agree to join video chat?"):
+                accept_invite()
+            else:
+                refuse_invite()
+
         elif header.message == "videoAvailable":
             logging.warning("video sharing approved")
             logging.warning("sharing video...")
@@ -600,14 +594,20 @@ def recv_video():
                                        25)
 
             video_feeder.start()
+            while video_feeder.is_feeding:
+                time.sleep(1)
 
             button_sendvideo['state'] = tkinter.NORMAL
 
         elif header.message == "videoNotAvailable":
-            logging.warning("%s is sharing video, not approved" % header.username)
-            sharing_user = "%s is " % header.username if header.username != username else "you are "
-            tkinter.messagebox.showerror('Rejected',
-                                         message="Video share rejected, %ssharing video" % sharing_user)
+            logging.warning("video sharing not approved" % header.username)
+
+        elif header.message == "goodbye":
+            cv2.destroyAllWindows()
+            video_tcp_socket.close()
+            video_udt_socket.close()
+            logging.warning("Video client %s signed off.." % username)
+            break
 
 
 r_chat = threading.Thread(target=recv_text)
@@ -615,6 +615,24 @@ r_chat.start()  # 开始线程接收信息
 
 r_video = threading.Thread(target=recv_video)
 r_video.start()
+
+
+def on_closing():
+    global EXIT
+    if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
+
+        chat_socket.send(struct.pack("I", len("goodbye".encode())))
+        chat_socket.send("goodbye".encode())
+
+        goodbye = message()
+        goodbye.message = "goodbye"
+        goodbye.username = username
+        tcp_send_command(goodbye, video_tcp_socket)
+        root.destroy()
+        exit()
+
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 root.mainloop()
 chat_socket.close()  # 关闭图形界面后关闭TCP连接

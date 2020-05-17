@@ -408,21 +408,23 @@ entry.place(x=5, y=350, width=570, height=40)
 
 
 def send_text(*args):
-    # 没有添加的话发送信息时会提示没有聊天对象
-    users.append('------Group chat-------')
-    # users.append('Robot')
-    print(chat)
-    if chat not in users:
-        tkinter.messagebox.showerror('Send error', message='There is nobody to talk to!')
-        return
-    if chat == username:
-        tkinter.messagebox.showerror('Send error', message='Cannot talk with yourself in private!')
-        return
-    # TODO Add Chinese support
-    mes = entry.get() + ':;' + username + ':;' + chat  # 添加聊天对象标记
-    chat_socket.send(struct.pack("I", len(mes.encode())))
-    chat_socket.send(mes.encode())
-    a.set('')  # 发送后清空文本框
+    text = entry.get()
+    if len(text) > 0:
+        # 没有添加的话发送信息时会提示没有聊天对象
+        users.append('------Group chat-------')
+        # users.append('Robot')
+        print(chat)
+        if chat not in users:
+            tkinter.messagebox.showerror('Send error', message='There is nobody to talk to!')
+            return
+        if chat == username:
+            tkinter.messagebox.showerror('Send error', message='Cannot talk with yourself in private!')
+            return
+        # TODO Add Chinese support
+        mes = entry.get() + ':;' + username + ':;' + chat  # 添加聊天对象标记
+        chat_socket.send(struct.pack("I", len(mes.encode())))
+        chat_socket.send(mes.encode())
+        a.set('')  # 发送后清空文本框
 
 
 # 创建发送按钮

@@ -63,9 +63,10 @@ class ChatServer(threading.Thread):
                 data = conn.recv(struct.unpack("I", conn.recv(struct.calcsize("I")))[0])  # 接收用户名
                 data = data.decode()
                 if data == "goodbye":
-                    lock.acquire()
-                    conn.send("goodbye".encode())
                     self.delUsers(conn, addr)
+                    lock.acquire()
+                    conn.send(struct.pack("I", len("goodbye".encode())))
+                    conn.send("goodbye".encode())
                     lock.release()
                     break
                 self.recv(data, addr)  # 保存信息到队列

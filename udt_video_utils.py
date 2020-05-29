@@ -109,14 +109,16 @@ class VideoFeeder:
         button_finish.place(x=0, y=self.frame_height + 15, width=self.frame_width, height=25)
         button_finish.pack()
 
-
     def show_frame(self):
         if self.is_feeding:
             _, frame = self.cap.read()
             frame = cv2.resize(frame, (self.frame_width, self.frame_height))
-            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            data = pickle.dumps(frame)
+            retval, buf = cv2.imencode(".webp",
+                                       frame,
+                                       [cv2.IMWRITE_WEBP_QUALITY, 10])
+
+            data = pickle.dumps(buf)
             data_list = list_split(data, 1024)
 
             data_header = message()
@@ -187,7 +189,9 @@ class VideoReceiver:
                     logging.warning("invalid frame received, expecte %d bytes, got %s bytes" % (data_length, len(data)))
                     error = "invalid frame"
 
-                frame = pickle.loads(data)
+                buf = pickle.loads(data)
+                frame = cv2.imdecode(buf, 1)
+
             except Exception as e:
                 error = str(e)
 

@@ -192,7 +192,7 @@ class FileServer(threading.Thread):
 
     # 保存上传的文件到当前工作目录
     def recvFile(self, message, conn):
-        name, file_length = struct.unpack('128sl', message)
+        name, file_length = struct.unpack('128si', message)
         name = name.strip(b'\00').decode()
         file_name = r'.%s' % os.path.sep + name.strip()
 
@@ -287,7 +287,7 @@ class UDTFileServer(threading.Thread):
     def sendList(self, conn):
         listdir = os.listdir(os.getcwd())
         listdir = json.dumps(listdir)
-        conn.send(struct.pack('l', len(listdir.encode())), 0)
+        conn.send(struct.pack('i', len(listdir.encode())), 0)
         conn.send(listdir.encode(), 0)
 
     # 发送文件函数
@@ -295,7 +295,7 @@ class UDTFileServer(threading.Thread):
         name = message.strip()  # 获取第二个参数(文件名)
         fileName = r'.%s' % os.path.sep + name
         file_length = os.stat(fileName).st_size
-        conn.send(struct.pack('l', file_length), 0)
+        conn.send(struct.pack('i', file_length), 0)
         fo = open(fileName, 'rb')
         while True:
             filedata = fo.read(1024)
@@ -307,7 +307,7 @@ class UDTFileServer(threading.Thread):
 
     # 保存上传的文件到当前工作目录
     def recvFile(self, message, conn):
-        name, file_length = struct.unpack('128sl', message)
+        name, file_length = struct.unpack('128si', message)
         name = name.strip(b'\00').decode()
         file_name = r'.%s' % os.path.sep + name.strip()
 

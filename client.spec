@@ -4,10 +4,10 @@ block_cipher = None
 
 
 a = Analysis(['client.py'],
-             pathex=['/home/hsli/workshop/The-chat-room'],
+             pathex=['C:\\MyData\\Workshop\\The-chat-room'],
              binaries=[],
-             datas=[('/home/hsli/miniconda2/envs/videochat/lib/python3.6/site-packages/PIL', 'PIL'),],
-             hiddenimports=['PIL', 'PIL._imagingtk', 'PIL._tkinter_finder'],
+             datas=[],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -30,5 +30,4 @@ exe = EXE(pyz,
           upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
-          console=False )
-
+          console=False , icon='icon.ico')

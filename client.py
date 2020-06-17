@@ -9,6 +9,9 @@ import time
 import cv2
 import tkinter.messagebox
 import uuid
+
+import easygui
+
 from message.message_pb2 import message
 from tkinter import filedialog
 from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的包
@@ -17,7 +20,7 @@ if platform.platform().startswith("Windows"):
 else:
     import udt
 
-from udt_video_utils import register_video_client, tcp_recv_command, tcp_send_command, udt_recv_command, udt_send_command
+from udt_video_utils import register_video_client, tcp_recv_command, tcp_send_command, VideoFeeder, VideoReceiver
 
 IP = ''
 PORT = 50007
@@ -36,7 +39,7 @@ login_window['width'] = 270
 login_window.resizable(0, 0)  # 限制窗口大小
 
 IP1 = tkinter.StringVar()
-IP1.set('service.hsli.top:%d' % PORT)  # 默认显示的ip和端口
+IP1.set('60.10.4.21:%d' % PORT)  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 
@@ -118,150 +121,6 @@ list2 = ''  # 列表框
 label = ''  # 显示路径的标签
 upload = ''  # 上传按钮
 close = ''  # 关闭按钮
-
-
-def tcp_file_client():
-    PORT2 = 50008  # 聊天室的端口为50007
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.connect((IP, PORT2))
-
-    # 修改root窗口大小显示文件管理的组件
-    root['height'] = 390
-    root['width'] = 760
-
-    # 创建列表框
-    list2 = tkinter.Listbox(root)
-    list2.place(x=580, y=25, width=300, height=325)
-
-    # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
-    def recvList(lu):
-        s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
-        s.send(lu.encode())
-        data = s.recv(4096)
-        data = json.loads(data.decode())
-        list2.delete(0, tkinter.END)  # 清空列表框
-        lu = lu.split(os.path.sep)
-        if len(lu) != 1:
-            list2.insert(tkinter.END, 'Return to the previous dir')
-            list2.itemconfig(0, fg='green')
-        for i in range(len(data)):
-            list2.insert(tkinter.END, ('' + data[i]))
-            if '.' not in data[i]:
-                list2.itemconfig(tkinter.END, fg='orange')
-            else:
-                list2.itemconfig(tkinter.END, fg='white')
-
-    # 创建标签显示服务端工作目录
-    def lab():
-        global label
-        data = s.recv(1024)  # 接收目录
-        lu = data.decode()
-        try:
-            label.destroy()
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        except:
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        recvList(lu)
-
-    # 进入指定目录(cd)
-    def cd(dir):
-        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
-        s.send(dir.encode())
-
-    # 刚连接上服务端时进行一次面板刷新
-    cd('same')
-    lab()
-
-    # 接收下载文件(get)
-    def get(name):
-        # 选择对话框, 选择文件的保存路径
-        fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
-        # 如果文件名非空才进行下载
-        if fileName:
-            s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
-            s.send(name.encode())
-            with open(fileName, 'wb') as f:
-                while True:
-                    data = s.recv(1024)
-                    if data == 'EOF'.encode():
-                        tkinter.messagebox.showinfo(title='Message',
-                                                    message='Download completed!')
-                        break
-                    f.write(data)
-
-    # 创建用于绑定在列表框上的函数
-    def run(*args):
-        indexs = list2.curselection()
-        index = indexs[0]
-        content = list2.get(index)
-        # 如果有一个 . 则为文件
-        if '.' in content:
-            get(content)
-            cd('same')
-        elif content == 'Return to the previous dir':
-            cd('..')
-        else:
-            content = 'cd ' + content
-            cd(content)
-        lab()  # 刷新显示页面
-
-    # 在列表框上设置绑定事件
-    list2.bind('<ButtonRelease-1>', run)
-
-    # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
-    def put():
-        # 选择对话框
-        fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
-        # 如果有选择文件才继续执行
-        if fileName:
-            name = fileName.split(os.path.sep)[-1]
-            # TODO introduce struct.pack to send command and data
-            command = 'put'
-            file_header = struct.pack('128si', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
-            header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
-            s.send(header)
-            s.send(file_header)
-            logging.warning("message %s sent to server" % file_header)
-            fo = open(fileName, 'rb')
-            while True:
-                filedata = fo.read(1024)
-                if not filedata:
-                    break
-                s.send(filedata)
-            fo.close()
-            # with open(fileName, 'rb') as f:
-            #     logging.warning("file %s opened" % fileName)
-            #     while True:
-            #         a = f.read(1024)
-            #         if not a:
-            #             break
-            #         s.send(a)
-            logging.warning("file sent")
-            tkinter.messagebox.showinfo(title='Message',
-                                        message='Upload completed!')
-        cd('same')
-        lab()  # 上传成功后刷新显示页面
-
-    # 创建上传按钮, 并绑定上传文件功能
-    upload = tkinter.Button(root, text='Upload file', command=put)
-    upload.place(x=600, y=353, height=30, width=80)
-
-    # 关闭文件管理器, 待完善
-    def closeFile():
-        root['height'] = 390
-        root['width'] = 580
-        # 关闭连接
-        header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
-        s.send(header)
-        s.close()
-
-    # 创建关闭按钮
-    close = tkinter.Button(root, text='Close', command=closeFile)
-    close.place(x=685, y=353, height=30, width=70)
-
 
 def udt_file_client():
     udt_file_port = PORT + 1  # 聊天室的端口为50007
@@ -351,7 +210,9 @@ def udt_file_client():
     # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
     def put():
         # 选择对话框
+        root.update()
         fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
+        # fileName = easygui.fileopenbox()
         # 如果有选择文件才继续执行
         if fileName:
             name = fileName.split('/')[-1]
@@ -443,19 +304,19 @@ root.bind('<Return>', send_text)  # 绑定回车发送信息
 
 # video chatting part
 client_uuid = str(uuid.uuid4())
-# video_tcp_socket, video_udt_socket = register_video_client(IP, PORT + 2, PORT + 3, username, client_uuid)
+video_tcp_socket, video_udt_socket = register_video_client(IP, PORT + 2, PORT + 3, username, client_uuid)
 
 
-# def send_video():
-#     if tkinter.messagebox.askokcancel("Share video", "Do you want to start a video sharing?"):
-#         invitation = message()
-#         invitation.message = "invitation"
-#         invitation.username = username
-#         tcp_send_command(invitation, video_tcp_socket)
+def send_video():
+    if tkinter.messagebox.askokcancel("Share video", "Do you want to start a video sharing?"):
+        invitation = message()
+        invitation.message = "invitation"
+        invitation.username = username
+        tcp_send_command(invitation, video_tcp_socket)
 
 
-# button_sendvideo = tkinter.Button(root, text='Video', command=send_video)
-# button_sendvideo.place(x=245, y=320, width=60, height=30)
+button_sendvideo = tkinter.Button(root, text='Video', command=send_video)
+button_sendvideo.place(x=245, y=320, width=60, height=30)
 
 
 # 私聊功能
@@ -533,99 +394,99 @@ def recv_text():
 
 
 # 用于时刻接收视频聊天邀请
-# def recv_video():
-#     logging.warning("video command receiver started..")
-#     while True:
-#         header = tcp_recv_command(video_tcp_socket)
-#         if header.ByteSize() == 0:
-#             continue
-#         logging.warning("command tunnel received message %s from server" % header.message)
-#         if header.message == "invitation":
-#             button_sendvideo['state'] = tkinter.DISABLED
-#
-#             def refuse_invite():
-#                 logging.warning("refused video invitation")
-#                 refuse_message = message()
-#                 refuse_message.username = username
-#                 refuse_message.message = "refuse"
-#                 tcp_send_command(refuse_message, video_tcp_socket)
-#                 button_sendvideo['state'] = tkinter.NORMAL
-#
-#             def accept_invite():
-#                 logging.warning("accepted video invitation")
-#                 accept_message = message()
-#                 accept_message.username = username
-#                 accept_message.message = "accept"
-#                 tcp_send_command(accept_message, video_tcp_socket)
-#
-#                 video_receiver = VideoReceiver(video_tcp_socket,
-#                                                video_udt_socket,
-#                                                username)
-#
-#                 while True:
-#                     error, remote_username, one_finish, sharing_hosts, frame = video_receiver.recv_frame()
-#
-#                     if error is not None:
-#                         logging.warning("error: %s" % error)
-#                         cv2.destroyAllWindows()
-#                         button_sendvideo['state'] = tkinter.NORMAL
-#                         continue
-#
-#                     if one_finish:
-#                         logging.warning("video share from %s finished" % remote_username)
-#                         cv2.destroyWindow("Video from %s" % remote_username)
-#
-#                     if len(sharing_hosts) == 0:
-#                         logging.warning("no host is sharing videos")
-#                         cv2.destroyAllWindows()
-#                         button_sendvideo['state'] = tkinter.NORMAL
-#                         break
-#
-#                     if frame is not None:
-#                         cv2.imshow("Video from %s" % remote_username, frame)
-#                         cv2.waitKey(1)
-#
-#             if tkinter.messagebox.askokcancel("Invitation", "Agree to join video chat?"):
-#                 accept_invite()
-#             else:
-#                 refuse_invite()
-#
-#         elif header.message == "videoAvailable":
-#             logging.warning("video sharing approved")
-#             logging.warning("sharing video...")
-#             button_sendvideo['state'] = tkinter.DISABLED
-#
-#             cap = cv2.VideoCapture(0)
-#
-#             video_feeder = VideoFeeder(cap,
-#                                        video_tcp_socket,
-#                                        video_udt_socket,
-#                                        username,
-#                                        (640, 480),
-#                                        25)
-#
-#             video_feeder.start()
-#             while video_feeder.is_feeding:
-#                 time.sleep(1)
-#
-#             button_sendvideo['state'] = tkinter.NORMAL
-#
-#         elif header.message == "videoNotAvailable":
-#             logging.warning("video sharing not approved" % header.username)
-#
-#         elif header.message == "goodbye":
-#             cv2.destroyAllWindows()
-#             video_tcp_socket.close()
-#             video_udt_socket.close()
-#             logging.warning("Video client %s signed off.." % username)
-#             break
+def recv_video():
+    logging.warning("video command receiver started..")
+    while True:
+        header = tcp_recv_command(video_tcp_socket)
+        if header.ByteSize() == 0:
+            continue
+        logging.warning("command tunnel received message %s from server" % header.message)
+        if header.message == "invitation":
+            button_sendvideo['state'] = tkinter.DISABLED
+
+            def refuse_invite():
+                logging.warning("refused video invitation")
+                refuse_message = message()
+                refuse_message.username = username
+                refuse_message.message = "refuse"
+                tcp_send_command(refuse_message, video_tcp_socket)
+                button_sendvideo['state'] = tkinter.NORMAL
+
+            def accept_invite():
+                logging.warning("accepted video invitation")
+                accept_message = message()
+                accept_message.username = username
+                accept_message.message = "accept"
+                tcp_send_command(accept_message, video_tcp_socket)
+
+                video_receiver = VideoReceiver(video_tcp_socket,
+                                               video_udt_socket,
+                                               username)
+
+                while True:
+                    error, remote_username, one_finish, sharing_hosts, frame = video_receiver.recv_frame()
+
+                    if error is not None:
+                        logging.warning("error: %s" % error)
+                        cv2.destroyAllWindows()
+                        button_sendvideo['state'] = tkinter.NORMAL
+                        continue
+
+                    if one_finish:
+                        logging.warning("video share from %s finished" % remote_username)
+                        cv2.destroyWindow("Video from %s" % remote_username)
+
+                    if len(sharing_hosts) == 0:
+                        logging.warning("no host is sharing videos")
+                        cv2.destroyAllWindows()
+                        button_sendvideo['state'] = tkinter.NORMAL
+                        break
+
+                    if frame is not None:
+                        cv2.imshow("Video from %s" % remote_username, frame)
+                        cv2.waitKey(1)
+
+            if tkinter.messagebox.askokcancel("Invitation", "Agree to join video chat?"):
+                accept_invite()
+            else:
+                refuse_invite()
+
+        elif header.message == "videoAvailable":
+            logging.warning("video sharing approved")
+            logging.warning("sharing video...")
+            button_sendvideo['state'] = tkinter.DISABLED
+
+            cap = cv2.VideoCapture(0)
+
+            video_feeder = VideoFeeder(cap,
+                                       video_tcp_socket,
+                                       video_udt_socket,
+                                       username,
+                                       (640, 480),
+                                       25)
+
+            video_feeder.start()
+            while video_feeder.is_feeding:
+                time.sleep(1)
+
+            button_sendvideo['state'] = tkinter.NORMAL
+
+        elif header.message == "videoNotAvailable":
+            logging.warning("video sharing not approved" % header.username)
+
+        elif header.message == "goodbye":
+            cv2.destroyAllWindows()
+            video_tcp_socket.close()
+            video_udt_socket.close()
+            logging.warning("Video client %s signed off.." % username)
+            break
 
 
 r_chat = threading.Thread(target=recv_text)
 r_chat.start()  # 开始线程接收信息
 
-# r_video = threading.Thread(target=recv_video)
-# r_video.start()
+r_video = threading.Thread(target=recv_video)
+r_video.start()
 
 
 def on_closing():
@@ -638,7 +499,8 @@ def on_closing():
         goodbye = message()
         goodbye.message = "goodbye"
         goodbye.username = username
-        # tcp_send_command(goodbye, video_tcp_socket)
+
+        tcp_send_command(goodbye, video_tcp_socket)
         root.destroy()
         exit()
 

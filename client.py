@@ -29,7 +29,7 @@ login_window['width'] = 270
 login_window.resizable(0, 0)  # 限制窗口大小
 
 IP1 = tkinter.StringVar()
-IP1.set('127.0.0.1:%d' % PORT)  # 默认显示的ip和端口
+IP1.set('60.10.4.21:%d' % PORT)  # 默认显示的ip和端口
 User = tkinter.StringVar()
 User.set('')
 
@@ -114,149 +114,6 @@ upload = ''  # 上传按钮
 close = ''  # 关闭按钮
 
 
-def tcp_file_client():
-    PORT2 = 50008  # 聊天室的端口为50007
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.connect((IP, PORT2))
-
-    # 修改root窗口大小显示文件管理的组件
-    root['height'] = 390
-    root['width'] = 760
-
-    # 创建列表框
-    list2 = tkinter.Listbox(root)
-    list2.place(x=580, y=25, width=300, height=325)
-
-    # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
-    def recvList(lu):
-        s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), len(lu.encode())))
-        s.send(lu.encode())
-        data = s.recv(4096)
-        data = json.loads(data.decode())
-        list2.delete(0, tkinter.END)  # 清空列表框
-        lu = lu.split(os.path.sep)
-        if len(lu) != 1:
-            list2.insert(tkinter.END, 'Return to the previous dir')
-            list2.itemconfig(0, fg='green')
-        for i in range(len(data)):
-            list2.insert(tkinter.END, ('' + data[i]))
-            if '.' not in data[i]:
-                list2.itemconfig(tkinter.END, fg='orange')
-            else:
-                list2.itemconfig(tkinter.END, fg='white')
-
-    # 创建标签显示服务端工作目录
-    def lab():
-        global label
-        data = s.recv(1024)  # 接收目录
-        lu = data.decode()
-        try:
-            label.destroy()
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        except:
-            label = tkinter.Label(root, text=lu)
-            label.place(x=580, y=0, )
-        recvList(lu)
-
-    # 进入指定目录(cd)
-    def cd(dir):
-        s.send(struct.pack('3si', bytes('cd ', encoding='utf8'), len(dir)))
-        s.send(dir.encode())
-
-    # 刚连接上服务端时进行一次面板刷新
-    cd('same')
-    lab()
-
-    # 接收下载文件(get)
-    def get(name):
-        # 选择对话框, 选择文件的保存路径
-        fileName = tkinter.filedialog.asksaveasfilename(title='Save file to', initialfile=name)
-        # 如果文件名非空才进行下载
-        if fileName:
-            s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)))
-            s.send(name.encode())
-            with open(fileName, 'wb') as f:
-                while True:
-                    data = s.recv(1024)
-                    if data == 'EOF'.encode():
-                        tkinter.messagebox.showinfo(title='Message',
-                                                    message='Download completed!')
-                        break
-                    f.write(data)
-
-    # 创建用于绑定在列表框上的函数
-    def run(*args):
-        indexs = list2.curselection()
-        index = indexs[0]
-        content = list2.get(index)
-        # 如果有一个 . 则为文件
-        if '.' in content:
-            get(content)
-            cd('same')
-        elif content == 'Return to the previous dir':
-            cd('..')
-        else:
-            content = 'cd ' + content
-            cd(content)
-        lab()  # 刷新显示页面
-
-    # 在列表框上设置绑定事件
-    list2.bind('<ButtonRelease-1>', run)
-
-    # 上传客户端所在文件夹中指定的文件到服务端, 在函数中获取文件名, 不用传参数
-    def put():
-        # 选择对话框
-        fileName = tkinter.filedialog.askopenfilename(title='Select upload file')
-        # 如果有选择文件才继续执行
-        if fileName:
-            name = fileName.split(os.path.sep)[-1]
-            # TODO introduce struct.pack to send command and data
-            command = 'put'
-            file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
-            header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
-            s.send(header)
-            s.send(file_header)
-            logging.warning("message %s sent to server" % file_header)
-            fo = open(fileName, 'rb')
-            while True:
-                filedata = fo.read(1024)
-                if not filedata:
-                    break
-                s.send(filedata)
-            fo.close()
-            # with open(fileName, 'rb') as f:
-            #     logging.warning("file %s opened" % fileName)
-            #     while True:
-            #         a = f.read(1024)
-            #         if not a:
-            #             break
-            #         s.send(a)
-            logging.warning("file sent")
-            tkinter.messagebox.showinfo(title='Message',
-                                        message='Upload completed!')
-        cd('same')
-        lab()  # 上传成功后刷新显示页面
-
-    # 创建上传按钮, 并绑定上传文件功能
-    upload = tkinter.Button(root, text='Upload file', command=put)
-    upload.place(x=600, y=353, height=30, width=80)
-
-    # 关闭文件管理器, 待完善
-    def closeFile():
-        root['height'] = 390
-        root['width'] = 580
-        # 关闭连接
-        header = struct.pack('3si', bytes('qui', encoding='utf8'), 0)
-        s.send(header)
-        s.close()
-
-    # 创建关闭按钮
-    close = tkinter.Button(root, text='Close', command=closeFile)
-    close.place(x=685, y=353, height=30, width=70)
-
-
 def udt_file_client():
     udt_file_port = PORT + 1  # 聊天室的端口为50007
     s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -285,7 +142,7 @@ def udt_file_client():
     # 将接收到的目录文件列表打印出来(dir), 显示在列表框中, 在pwd函数中调用
     def ls():
         s.send(struct.pack('3si', bytes('ls ', encoding='utf8'), 0), 0)
-        data_length = struct.unpack("l", s.recv(struct.calcsize('l'), 0))[0]
+        data_length = struct.unpack("i", s.recv(struct.calcsize('i'), 0))[0]
         data = s.recv(data_length, 0)
         data = json.loads(data.decode())
         list2.delete(0, tkinter.END)  # 清空列表框
@@ -310,7 +167,7 @@ def udt_file_client():
         if fileName:
             s.send(struct.pack('3si', bytes('get', encoding='utf8'), len(name)), 0)
             s.send(name.encode(), 0)
-            file_length = struct.unpack('l', s.recv(struct.calcsize('l'), 0))[0]
+            file_length = struct.unpack('i', s.recv(struct.calcsize('i'), 0))[0]
             recvd_size = 0
             logging.warning("%s bytes to receive, start receiving..." % file_length)
             start_time = time.time()
@@ -348,7 +205,7 @@ def udt_file_client():
             name = fileName.split(os.path.sep)[-1]
             # TODO introduce struct.pack to send command and data
             command = 'put'
-            file_header = struct.pack('128sl', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
+            file_header = struct.pack('128si', bytes(name, encoding='utf8'), os.stat(fileName).st_size)
             header = struct.pack('3si', bytes(command, encoding='utf8'), len(file_header))
             s.send(header, 0)
             s.send(file_header, 0)
@@ -622,7 +479,6 @@ r_video.start()
 def on_closing():
     global EXIT
     if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
-
         chat_socket.send(struct.pack("I", len("goodbye".encode())))
         chat_socket.send("goodbye".encode())
 

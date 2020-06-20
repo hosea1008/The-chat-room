@@ -6,12 +6,7 @@ import tkinter
 import cv2
 
 from message.message_pb2 import message
-
-import platform
-if platform.platform().startswith("Windows"):
-    import win32_udt as udt
-else:
-    import udt
+import win32_udt as udt
 import logging
 
 
@@ -24,10 +19,7 @@ def register_video_client(server_addr, tcp_port, udt_port, username, client_uuid
     tcp_socket.connect((server_addr, tcp_port))
     logging.warning("TCP socket connected to %s:%s" % (server_addr, tcp_port))
 
-    if platform.platform().startswith("Windows"):
-        udt_socket = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0, "video")
-    else:
-        udt_socket = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    udt_socket = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     udt_socket.connect((server_addr, udt_port))
     logging.warning("UDT socket connected to %s:%s" % (server_addr, udt_port))
 

@@ -7,9 +7,9 @@ AF_INET = 2
 SOCK_STREAM = 1
 
 
-def get_libpath(usage):
+def get_libpath():
     caller_file = inspect.stack()[1][1]  # caller's filename
-    return os.path.join(os.path.abspath(os.path.dirname(caller_file)), "udtc_%s.dll" % usage)
+    return os.path.join(os.path.abspath(os.path.dirname(caller_file)), "udtc.dll")
 
 
 class sockaddr(Structure):
@@ -124,8 +124,8 @@ class pyudt_socket:
 
 
 class socket:
-    def __init__(self, af, type, flags, usage):
-        self.libpath = get_libpath(usage)
+    def __init__(self, af, type, flags):
+        self.libpath = get_libpath()
         self.udtlib = CDLL(self.libpath)
         self.sock = self.udtlib.udt_socket(c_int(af), c_int(type), c_int(flags))
         if self.sock < 0:

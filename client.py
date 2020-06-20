@@ -10,15 +10,10 @@ import cv2
 import tkinter.messagebox
 import uuid
 
-import easygui
-
 from message.message_pb2 import message
 from tkinter import filedialog
 from tkinter.scrolledtext import ScrolledText  # 导入多行文本框用到的包
-if platform.platform().startswith("Windows"):
-    import win32_udt as udt
-else:
-    import udt
+import win32_udt as udt
 
 from udt_video_utils import register_video_client, tcp_recv_command, tcp_send_command, VideoFeeder, VideoReceiver
 
@@ -113,7 +108,9 @@ listbox.tag_config('green', foreground='green')
 listbox.tag_config('pink', foreground='pink')
 listbox.tag_config('yellow', foreground='yellow')
 listbox.tag_config('cyan', foreground='cyan')
-listbox.insert(tkinter.END, 'Welcome to the chat room!', 'yellow')
+listbox.tag_config('gray', foreground='gray')
+listbox.tag_config('orange', foreground='orange')
+listbox.insert(tkinter.END, 'Welcome to the chat room!', 'cyan')
 
 # 文件功能代码部分
 # 将在文件功能窗口用到的组件名都列出来, 方便重新打开时会对面板进行更新
@@ -125,10 +122,7 @@ close = ''  # 关闭按钮
 def udt_file_client():
     udt_file_port = PORT + 1  # 聊天室的端口为50007
 
-    if platform.platform().startswith("Windows"):
-        s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0, "file")
-    else:
-        s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+    s = udt.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
     logging.warning("UDT socket created")
     s.connect((IP, udt_file_port))
     logging.warning("UDT socket connected to %s:%s" % (IP, udt_file_port))
@@ -159,7 +153,7 @@ def udt_file_client():
         list2.delete(0, tkinter.END)  # 清空列表框
         for i in range(len(data)):
             list2.insert(tkinter.END, ('' + data[i]))
-            list2.itemconfig(tkinter.END, fg='white')
+            list2.itemconfig(tkinter.END, fg='orange')
 
     refresh = tkinter.Button(udt_pannel, text='Refresh', command=ls)
     refresh.place(x=105, y=353, height=30, width=70)
@@ -383,9 +377,9 @@ def recv_text():
                 data1 = '\n' + data1
                 if data3 == '------Group chat-------':
                     if data2 == username:  # 如果是自己则将则字体变为蓝色
-                        listbox.insert(tkinter.END, data1, 'green')
+                        listbox.insert(tkinter.END, data1, 'gray')
                     else:
-                        listbox.insert(tkinter.END, data1, 'yellow')  # END将信息加在最后一行
+                        listbox.insert(tkinter.END, data1, 'green')  # END将信息加在最后一行
                     if len(data) == 4:
                         listbox.insert(tkinter.END, '\n' + data[3], 'pink')
                 elif data2 == username or data3 == username:  # 显示私聊
